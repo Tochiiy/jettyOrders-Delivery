@@ -11,4 +11,7 @@ export const getRestaurantOrders = (restaurantId: string) =>
     axios.get(`${API}/api/order/restaurant/${restaurantId}`, { headers: authHeaders() });
 
 export const updateOrderStatus = (orderId: string, status: string) =>
-    axios.patch(`${API}/api/order/${orderId}/status`, { status }, { headers: authHeaders() });
+    axios.put(`${API}/api/order/${orderId}/status`, { status }, { headers: authHeaders() });
+
+export const getOrderById = (orderId: string) =>
+    axios.get(`${API}/api/order/${orderId}`, { headers: authHeaders() });

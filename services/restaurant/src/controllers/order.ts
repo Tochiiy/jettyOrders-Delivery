@@ -175,18 +175,22 @@ const updateOrderStatus = TryCatch(async (req: AuthenticatedRequest, res: Respon
     order.status = status;
     await order.save();
 
-    await axios.post(`${process.env.REALTIME_SERVICE_URL}/api/internal/emit`, {
-        event: "order:update",
-        room: `user:${order.userId}`,
-        payload: {
-            orderId: order._id.toString(),
-            status: order.status,
-        },
-    }, {
-        headers: {
-            "x-internal-key": process.env.INTERNAL_SERVICE_KEY,
-        },
-    });
+    try {
+        await axios.post(`${process.env.REALTIME_SERVICE_URL}/api/internal/emit`, {
+            event: "order:update",
+            room: `user:${order.userId}`,
+            payload: {
+                orderId: order._id.toString(),
+                status: order.status,
+            },
+        }, {
+            headers: {
+                "x-internal-key": process.env.INTERNAL_SERVICE_KEY,
+            },
+        });
+    } catch {
+        console.warn("Failed to emit real-time event for order update");
+    }
 
     return res.status(200).json({ message: "Order status updated successfully", order });
 })

@@ -86,6 +86,7 @@ const orderSchema: Schema<IOrder> = new Schema(
                 "accepted",
                 "preparing",
                 "ready_for_pickup",
+                "ready_for_rider",
                 "rider_assigned",
                 "pickedUp",
                 "canceled",

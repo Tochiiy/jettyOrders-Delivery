@@ -83,7 +83,7 @@ const initSocketServer = (server: http.Server) => {
 
     // Join a personal room named after the user's ID.
     // This lets us send targeted messages (e.g., order updates) to a specific user.
-    socket.join(userId)
+    socket.join(`user:${userId}`)
 
     // If the user is a seller with a restaurant, join a restaurant-specific room.
     // Joining a room per restaurant lets us broadcast events to ALL

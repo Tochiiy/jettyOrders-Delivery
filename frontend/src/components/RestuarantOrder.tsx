@@ -3,7 +3,7 @@ import type { IOrder } from '../types/types'
 import { useSocket } from "../context/SocketContext"
 import { getRestaurantOrders } from "../services/orderService"
 import audio from '../assets/notification-951.wav'
-
+import OrderCard from './OrderCard'
 const ACTIVE_STATUS = [
                 "placed",
                 "accepted",
@@ -105,7 +105,7 @@ const RestuarantOrder = ({ restaurantId }: { restaurantId: string }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {
             activeOrders.map((order) => (
-              <p key={order._id}>{order._id}</p>
+             <OrderCard key={order._id} order={order} onstatusUpdate={fetchOrders}/>
             ))
           }
       </div>}
@@ -118,7 +118,7 @@ const RestuarantOrder = ({ restaurantId }: { restaurantId: string }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {
             completedOrders.map((order) => (
-              <p key={order._id}>{order._id}</p>
+             <OrderCard key={order._id} order={order} onstatusUpdate={fetchOrders}/>
             ))
           }
       </div>}
