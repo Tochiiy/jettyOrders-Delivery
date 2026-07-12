@@ -5,10 +5,10 @@ import { useAppData } from "../context/AppContext";
 import * as restaurantService from "../services/restaurantService";
 
 interface props {
-    fetchMyRestuarant: () => Promise<void>;
+    fetchMyRestaurant: () => Promise<void>;
 }
 
-const AddResturant = ({ fetchMyRestuarant }: props) => {
+const AddRestaurant = ({ fetchMyRestaurant }: props) => {
     const [submitting, setSubmitting] = useState(false);
     const [image, setImage] = useState<File | null>(null);
     const { loadingLocation, location } = useAppData();
@@ -30,7 +30,7 @@ const AddResturant = ({ fetchMyRestuarant }: props) => {
             toast.success(data.message);
             form.reset();
             setImage(null);
-            await fetchMyRestuarant();
+            await fetchMyRestaurant();
         } catch (err: any) {
             const message = err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || "Something went wrong";
             toast.error(message);
@@ -68,4 +68,4 @@ const AddResturant = ({ fetchMyRestuarant }: props) => {
     );
 };
 
-export default AddResturant;
+export default AddRestaurant;

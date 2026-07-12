@@ -9,7 +9,7 @@ interface Props {
   viewMode?: ViewMode;
 }
 
-const RestuarantCard = ({ restaurant, distanceKm = null, viewMode = "nearby" }: Props) => {
+const RestaurantCard = ({ restaurant, distanceKm = null, viewMode = "nearby" }: Props) => {
   const navigate = useNavigate();
 
   const handleOpen = () => navigate(`/restaurant/${restaurant._id}`);
@@ -56,4 +56,4 @@ const RestuarantCard = ({ restaurant, distanceKm = null, viewMode = "nearby" }: 
   );
 };
 
-export default RestuarantCard;
+export default RestaurantCard;

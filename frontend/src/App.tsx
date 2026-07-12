@@ -2,13 +2,13 @@ import {  Route, Routes, BrowserRouter} from 'react-router-dom'
 import Homepage from './pages/Homepage'
 import Login from './pages/Login'
 import { Toaster } from 'react-hot-toast'
-import ProtectedRoute from './components/protectedRoute'
-import PublicRoute from './components/publicRoute'
+import ProtectedRoute from './components/ProtectedRoute'
+import PublicRoute from './components/PublicRoute'
 import SelectRole from './pages/SelectRole'
 import Navbar from './components/Navbar'
 import Account from './components/Account'
-import Restuarant from './pages/Restuarant'
-import RestuarantPage from './pages/RestuarantPage'
+import RestaurantDashboard from './pages/RestaurantDashboard'
+import RestaurantMenu from './pages/RestaurantMenu'
 import PublicMenu from './pages/PublicMenu'
 import BrowseMenu from './pages/BrowseMenu'
 import Cart from './pages/Cart'
@@ -29,7 +29,7 @@ const App = () => {
           <Route path="/" element={<Homepage />} />
           <Route path="/select-role" element={<SelectRole />} />
           <Route path="/account" element={<Account />} />
-          <Route path="/seller/add" element={<Restuarant />} />
+          <Route path="/seller/add" element={<RestaurantDashboard />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/browse" element={<BrowseMenu />} />
           <Route path="/address" element={<AddressPage />} />
@@ -39,7 +39,7 @@ const App = () => {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/order/:orderId" element={<OrderConfirmation />} />
         </Route>
-        <Route path="/restaurant/:restaurantId" element={<RestuarantPage />} />
+        <Route path="/restaurant/:restaurantId" element={<RestaurantMenu />} />
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<Login />} />
           <Route path="/reset-password" element={<ResetPassword />} />

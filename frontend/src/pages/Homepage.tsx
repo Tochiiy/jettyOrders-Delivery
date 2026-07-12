@@ -3,7 +3,7 @@ import { useAppData } from "../context/AppContext";
 import { useEffect, useState } from "react";
 import * as restaurantService from "../services/restaurantService";
 import type { IRestaurant } from "../types/types";
-import RestuarantCard from "../components/RestuarantCard";
+import RestaurantCard from "../components/RestaurantCard";
 import RestaurantCarousel from "../components/RestaurantCarousel";
 import { BiMapPin, BiStore, BiBuilding, BiPhone, BiError } from "react-icons/bi";
 
@@ -236,7 +236,7 @@ const Homepage = () => {
                 : null;
 
               return (
-                <RestuarantCard key={restaurant._id} restaurant={restaurant} distanceKm={distance} viewMode={viewMode} />
+                <RestaurantCard key={restaurant._id} restaurant={restaurant} distanceKm={distance} viewMode={viewMode} />
               );
             })}
           </div>

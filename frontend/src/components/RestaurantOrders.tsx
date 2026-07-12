@@ -12,7 +12,7 @@ const ACTIVE_STATUS = [
                 "rider_assigned",
                 "delivered",
             ]
-const RestuarantOrder = ({ restaurantId }: { restaurantId: string }) => {
+const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
   const [orders, setOrders] = useState<IOrder[]>([]);
   const [loading, setloading] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
@@ -128,9 +128,7 @@ const RestuarantOrder = ({ restaurantId }: { restaurantId: string }) => {
 
 
 
-
-
   </div>
 }
 
-export default RestuarantOrder
+export default RestaurantOrders

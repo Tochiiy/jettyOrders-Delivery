@@ -7,7 +7,7 @@ import { BiChevronLeft, BiMapPin, BiPhone, BiCheckCircle, BiX, BiTime, BiShield,
 import { toast } from "react-hot-toast";
 import type { IRestaurant, IMenuItem } from "../types/types";
 
-const RestuarantPage = () => {
+const RestaurantMenu = () => {
   const { restaurantId } = useParams<{ restaurantId: string }>();
   const [restaurant, setRestaurant] = useState<IRestaurant | null>(null);
   const [items, setItems] = useState<IMenuItem[]>([]);
@@ -247,4 +247,4 @@ const RestuarantPage = () => {
   );
 };
 
-export default RestuarantPage;
+export default RestaurantMenu;

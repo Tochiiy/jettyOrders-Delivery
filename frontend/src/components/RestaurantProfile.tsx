@@ -5,17 +5,17 @@ import { BiEdit, BiMapPin, BiPhone, BiCalendar, BiTrash } from "react-icons/bi";
 import * as restaurantService from "../services/restaurantService";
 
 interface props { 
-    restuarant: IRestaurant;
+    restaurant: IRestaurant;
     isSeller: boolean;
     onUpdate?: (restaurant: IRestaurant) => void;
     onDelete?: () => void;
 }
 
-const RestuarantProfile = ({ restuarant, isSeller, onUpdate, onDelete }: props) => {
+const RestaurantProfile = ({ restaurant, isSeller, onUpdate, onDelete }: props) => {
   const [editMode, setEditMode] = useState(false);
-  const [name, setName] = useState(restuarant.name);
-  const [description, setDescription] = useState(restuarant.description || "");
-  const [isOpen, setIsOpen] = useState(restuarant.isOpen);
+  const [name, setName] = useState(restaurant.name);
+  const [description, setDescription] = useState(restaurant.description || "");
+  const [isOpen, setIsOpen] = useState(restaurant.isOpen);
   const [loading, setLoading] = useState(false);
  
   const deleteRestaurantHandler = async () => {
@@ -68,14 +68,14 @@ const RestuarantProfile = ({ restuarant, isSeller, onUpdate, onDelete }: props) 
   return (
     <div className="rounded-xl bg-white shadow-sm overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[1.01] cursor-pointer">
       <div className="relative">
-        {restuarant.image && (
-          <img src={restuarant.image} alt={restuarant.name} className="w-full h-48 object-cover" />
+        {restaurant.image && (
+          <img src={restaurant.image} alt={restaurant.name} className="w-full h-48 object-cover" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
         <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
           <div>
-            <h2 className="font-display text-3xl font-bold text-white drop-shadow-sm">{restuarant.name}</h2>
-            {restuarant.description && <p className="text-base text-white/80 mt-1 line-clamp-2">{restuarant.description}</p>}
+            <h2 className="font-display text-3xl font-bold text-white drop-shadow-sm">{restaurant.name}</h2>
+            {restaurant.description && <p className="text-base text-white/80 mt-1 line-clamp-2">{restaurant.description}</p>}
           </div>
           {isSeller && !editMode && (
             <button onClick={() => setEditMode(true)} className="flex items-center gap-1.5 bg-white/90 hover:bg-white text-gray-700 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
@@ -105,15 +105,15 @@ const RestuarantProfile = ({ restuarant, isSeller, onUpdate, onDelete }: props) 
               <div className="space-y-1.5 flex-1">
                 <div className="flex items-center gap-2.5 text-gray-600">
                   <BiMapPin className="h-5 w-5 text-[#E23744] shrink-0" />
-                  <span className="line-clamp-1">{restuarant.autoLocation.formattedAddress}</span>
+                  <span className="line-clamp-1">{restaurant.autoLocation.formattedAddress}</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-gray-600">
                   <BiPhone className="h-5 w-5 text-[#E23744] shrink-0" />
-                  <span>{restuarant.phone}</span>
+                  <span>{restaurant.phone}</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-gray-600">
                   <BiCalendar className="h-5 w-5 text-[#E23744] shrink-0" />
-                  <span>Joined {new Date(restuarant.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
+                  <span>Joined {new Date(restaurant.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
                 </div>
               </div>
             </div>
@@ -121,7 +121,7 @@ const RestuarantProfile = ({ restuarant, isSeller, onUpdate, onDelete }: props) 
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${isOpen ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                 {isOpen ? "Open" : "Closed"}
               </span>
-              {restuarant.isVerified && (
+              {restaurant.isVerified && (
                 <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">Verified</span>
               )}
             </div>
@@ -155,4 +155,4 @@ const RestuarantProfile = ({ restuarant, isSeller, onUpdate, onDelete }: props) 
   )
 }
 
-export default RestuarantProfile
+export default RestaurantProfile

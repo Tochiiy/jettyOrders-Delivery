@@ -2,16 +2,16 @@ import { useEffect, useState } from "react";
 import * as restaurantService from "../services/restaurantService";
 import { useAppData } from "../context/AppContext";
 import type { IRestaurant } from "../types/types";
-import AddResturant from "../components/AddResturant";
-import RestuarantProfile from "../components/RestuarantProfile";
+import AddRestaurant from "../components/AddRestaurant";
+import RestaurantProfile from "../components/RestaurantProfile";
 import MenuItems from "../components/MenuItems";
 import AddMenuItem from "../components/AddMenuItem";
 import MarketingCarousel from "../components/MarketingCarousel";
-import RestuarantOrder from "../components/RestuarantOrder";
+import RestaurantOrders from "../components/RestaurantOrders";
 import { BiFoodMenu, BiPlusCircle, BiBarChartAlt2 } from "react-icons/bi";
 
 type SellerTab = "menu" | "add-item" | "sales";
-const Restuarant = () => {
+const RestaurantDashboard = () => {
     const { user } = useAppData();
     const [restaurant, setRestaurant] = useState<IRestaurant | null>(null);
     const [loading, setLoading] = useState(true);
@@ -74,7 +74,7 @@ const Restuarant = () => {
                 <h3 className="text-xl font-semibold text-slate-900">Create your restaurant</h3>
                 <p className="mt-2 text-sm text-slate-500">Add your restaurant details to unlock menu management and sales tracking.</p>
                 <div className="mt-6">
-                  <AddResturant fetchMyRestuarant={fetchMyRestaurant} />
+                  <AddRestaurant fetchMyRestaurant={fetchMyRestaurant} />
                 </div>
               </div>
 
@@ -101,10 +101,10 @@ const Restuarant = () => {
                     </div>
                 </div>
                 
-                <RestuarantProfile restuarant={restaurant} isSeller={user?.role === "seller"}
+                <RestaurantProfile restaurant={restaurant} isSeller={user?.role === "seller"}
                     onUpdate={(r) => setRestaurant(r)} onDelete={() => setRestaurant(null)} />
                 
-                <RestuarantOrder restaurantId={restaurant._id} />
+                <RestaurantOrders restaurantId={restaurant._id} />
                 
                 <div className="mt-8">
                     <div className="mx-auto max-w-5xl">
@@ -171,4 +171,4 @@ const Restuarant = () => {
     );
 };
 
-export default Restuarant;
+export default RestaurantDashboard;
