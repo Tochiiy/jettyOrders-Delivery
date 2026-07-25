@@ -13,7 +13,7 @@ interface OrderItem {
 interface Order {
     _id: string;
     userId: string;
-    restuarantName: string;
+    restaurantName: string;
     items: OrderItem[];
     totalAmount: number;
     status: string;

@@ -14,7 +14,7 @@ export const fetchMe = () =>
     axios.get(`${API}/api/auth/me`, { headers: authHeaders() });
 
 export const addRole = (role: string) =>
-    axios.put(`${API}/api/auth/add/role`, { role }, { headers: authHeaders() });
+    axios.post(`${API}/api/auth/add/role`, { role }, { headers: authHeaders() });
 
 export const forgotPassword = (email: string) =>
     axios.post(`${API}/api/auth/forgot-password`, { email });

@@ -31,13 +31,13 @@ const Navbar = () => {
               </Link>
               
               <div className="flex items-center gap-4">
-                  {user?.role !== "seller" && (
+                  {isAuth && user?.role !== "seller" && user?.role !== "rider" && (
                       <Link to={"/cart"} className="relative">
                           <CgShoppingCart className="h-6 w-6 text-[#E23744]" />
                           <span className="absolute -top-2 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#E23744] px-1.5 text-[10px] text-white font-semibold">{cartQuantity}</span>
                       </Link>
                   )}
-                  {isAuth && (
+                  {isAuth && user?.role !== "rider" && (
                       <Link to="/browse" className="font-medium text-[#E23744]">
                           Browse
                       </Link>

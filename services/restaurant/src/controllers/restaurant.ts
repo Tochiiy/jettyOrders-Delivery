@@ -200,7 +200,7 @@ const getAllRestaurants = TryCatch(async (_req: AuthenticatedRequest, res: Respo
     res.status(200).json({ success: true, message: "Restaurants fetched", count: restaurants.length, restaurants });
 });
 
-const fetchSingleRestuarant = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
+const fetchSingleRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const restaurant = await Restaurant.findById(id);
     if (!restaurant) return res.status(404).json({ success: false, message: "Restaurant not found", error: { code: "RESTAURANT_NOT_FOUND", message: "Restaurant not found" } });
@@ -234,4 +234,4 @@ const deleteRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Respons
     res.status(200).json({ success: true, message: "Restaurant deleted successfully", token });
 })
 
-export { addRestaurant, fetchMyRestaurant, toggleRestaurantStatus, editRestaurant, getNearbyRestaurant, getAllRestaurants, fetchSingleRestuarant, deleteRestaurant }
+export { addRestaurant, fetchMyRestaurant, toggleRestaurantStatus, editRestaurant, getNearbyRestaurant, getAllRestaurants, fetchSingleRestaurant, deleteRestaurant }

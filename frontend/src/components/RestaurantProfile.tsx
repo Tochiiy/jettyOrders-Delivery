@@ -25,6 +25,7 @@ const RestaurantProfile = ({ restaurant, isSeller, onUpdate, onDelete }: props) 
       const { data } = await restaurantService.deleteRestaurant();
       if (data.token) {
         localStorage.setItem("token", data.token);
+        window.dispatchEvent(new Event("token-changed"));
       }
       toast.success(data.message);
       if (onDelete) onDelete();

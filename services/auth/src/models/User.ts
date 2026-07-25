@@ -8,6 +8,7 @@ export interface IUser extends Document {
     password?: string;
     resetToken?: string | null;
     resetTokenExpiry?: Date | null;
+    restaurantId?: string | null;
 }
 
 
@@ -41,6 +42,10 @@ const userSchema: Schema<IUser> = new mongoose.Schema({
         default: null,
     },
     role: {
+        type: String,
+        default: null,
+    },
+    restaurantId: {
         type: String,
         default: null,
     },

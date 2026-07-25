@@ -1,5 +1,5 @@
 import { io, Socket } from "socket.io-client"
-import { createContext, useContext, useEffect, useRef } from "react"
+import { createContext, useContext, useEffect, useRef, useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
 import { useAppData } from "./AppContext"
 import { REALTIME_API } from "../services/api"
@@ -10,19 +10,26 @@ interface SocketContextType {
 
 const SocketContext = createContext<SocketContextType>({ socket: null })
 
+const subscribeToTokenChanges = (callback: () => void) => {
+  window.addEventListener("token-changed", callback)
+  return () => window.removeEventListener("token-changed", callback)
+}
+
 const SocketProvider = ({ children }: { children: ReactNode }) => {
-  const { isAuth } = useAppData()
+  const { isAuth, user } = useAppData()
   const socketRef = useRef<Socket | null>(null)
 
+  const token = useSyncExternalStore(
+    subscribeToTokenChanges,
+    () => localStorage.getItem("token")
+  )
+
   useEffect(() => {
-    if (!isAuth) {
+    if (!isAuth || !token) {
       socketRef.current?.disconnect()
       socketRef.current = null
       return
     }
-
-    const token = localStorage.getItem("token")
-    if (!token) return
 
     const newSocket = io(REALTIME_API, {
       auth: { token },
@@ -43,7 +50,7 @@ const SocketProvider = ({ children }: { children: ReactNode }) => {
       newSocket.disconnect()
       socketRef.current = null
     }
-  }, [isAuth])
+  }, [isAuth, user?._id, user?.restaurantId, user?.role, token])
 
   return (
     <SocketContext.Provider value={{ socket: socketRef.current }}>

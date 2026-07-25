@@ -13,6 +13,10 @@ const connectRabbitMQ = async () => {
                 durable: true,
             });
 
+            await channel.assertQueue(process.env.ORDER_EVENT_QUEUE as string, {
+                durable: true,
+            });
+
             console.log("Connected to RabbitMQ🐇(restuarant service)");
             resolve();
         } catch (err) {

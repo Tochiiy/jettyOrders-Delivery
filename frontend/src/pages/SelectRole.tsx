@@ -19,6 +19,7 @@ const SelectRole = () => {
         try {
             const { data } = await authService.addRole(role!);
             localStorage.setItem("token", data.token);
+            window.dispatchEvent(new Event("token-changed"));
             setUser(data.user);
             toast.success(data.message);
             navigate("/", { replace: true });

@@ -2,6 +2,7 @@ import { useAppData } from "../context/AppContext"
 import { useNavigate } from "react-router-dom"
 import { toast } from "react-hot-toast"
 import { BiPackage, BiLogOut, BiMapPin, BiStore } from "react-icons/bi"
+import { toggleRestaurantStatus } from "../services/restaurantService"
 
 const Account = () => {
     const { user, setUser, setIsAuth } = useAppData();
@@ -9,7 +10,15 @@ const Account = () => {
     const firstLetter = user?.name?.charAt(0).toUpperCase();
     const navigate = useNavigate();
 
-    const logOutHandler = () => {
+    const logOutHandler = async () => {
+        if (user?.role === "seller") {
+            try {
+                await toggleRestaurantStatus(false);
+                toast.success("Restaurant closed");
+            } catch {
+                // proceed with logout regardless
+            }
+        }
         localStorage.removeItem("token");
         setUser(null);
         setIsAuth(false);

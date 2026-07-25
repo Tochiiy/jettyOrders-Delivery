@@ -88,7 +88,7 @@ export interface IOrder {
     _id: string;
     userId: string;
     restaurantId: string;
-    restuarantName: string;
+    restaurantName: string;
     riderId?: string | null;
     riderPhone?: number | null;
     riderName?: string | null;
@@ -125,4 +125,22 @@ export interface IRestaurant {
     }
     isOpen: boolean;
     createdAt: Date;
+}
+
+export interface IRider {
+    _id: string;
+    userId: string;
+    phone: string;
+    image: string;
+    driversLicenseNumber: string;
+    isAvailable: boolean;
+    isVerified: boolean;
+    totalDeliveries: number;
+    lastActiveAt?: string;
+    currentLocation?: {
+        type: "Point";
+        coordinates: [number, number];
+    };
+    createdAt: string;
+    updatedAt: string;
 }

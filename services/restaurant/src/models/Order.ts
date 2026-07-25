@@ -3,10 +3,11 @@ import mongoose, { Schema, Document } from "mongoose";
 interface IOrder extends Document {
     userId: string;
     restaurantId: string;
-    restuarantName: string;
+    restaurantName: string;
     riderId?: string | null;
     riderPhone: number | null;
     riderName: string | null;
+    riderImage: string | null;
     distance: number;
     riderAmount: number;
     items: {
@@ -35,9 +36,9 @@ interface IOrder extends Document {
         | "accepted"
         | "preparing"
         | "ready_for_pickup"
+        | "ready_for_rider"
         | "rider_assigned"
         | "pickedUp"
-        | "cancelled"
         | "canceled"
         | "delivered";
 
@@ -53,10 +54,11 @@ const orderSchema: Schema<IOrder> = new Schema(
     {
         userId: { type: String, required: true },
         restaurantId: { type: String, required: true },
-        restuarantName: { type: String, required: true },
+        restaurantName: { type: String, required: true },
         riderId: { type: String, default: null },
         riderPhone: { type: Number, default: null },
         riderName: { type: String, default: null },
+        riderImage: { type: String, default: null },
         distance: { type: Number, required: true },
         riderAmount: { type: Number, required: true },
         items: {

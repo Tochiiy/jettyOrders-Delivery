@@ -38,6 +38,7 @@ const Login = () => {
             const result = await authService.loginWithGoogle(credentialResponse.code);
 
             localStorage.setItem("token", result.data.token);
+            window.dispatchEvent(new Event("token-changed"));
             toast.success(result.data.message);
             setUser(result.data.user);
             setIsAuth(true);
@@ -65,6 +66,7 @@ const Login = () => {
         try {
             const res = await authService.login(email, password);
             localStorage.setItem('token', res.data.token);
+            window.dispatchEvent(new Event("token-changed"));
             toast.success(res.data.message);
             setUser(res.data.user);
             setIsAuth(true);
@@ -84,6 +86,7 @@ const Login = () => {
         try {
             const res = await authService.register(name, email, password);
             localStorage.setItem('token', res.data.token);
+            window.dispatchEvent(new Event("token-changed"));
             toast.success(res.data.message);
             setUser(res.data.user);
             setIsAuth(true);

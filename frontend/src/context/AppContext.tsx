@@ -8,7 +8,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const AppProviderInner = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isAuth, setIsAuth] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const [location, setLocation] = useState<LocationData | null>(null);
     const [loadingLocation, setLoadingLocation] = useState(false);

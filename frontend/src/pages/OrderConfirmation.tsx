@@ -94,7 +94,7 @@ const OrderConfirmation = () => {
                 <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                         <div>
-                            <h2 className="text-lg font-semibold text-slate-900">{order.restuarantName}</h2>
+                            <h2 className="text-lg font-semibold text-slate-900">{order.restaurantName}</h2>
                             <p className="mt-1 text-xs text-slate-400">Order #{order._id.slice(-8)}</p>
                         </div>
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColor[order.status] || "text-slate-600 bg-slate-100"}`}>
@@ -143,6 +143,7 @@ const OrderConfirmation = () => {
                     </div>
 
                     <p className="mt-2 text-xs text-slate-400">{order.deliveryAddress.formattedAddress}</p>
+                    <p className="mt-2 text-xs text-slate-400">{order.deliveryAddress.mobile}</p>
                 </div>
             </div>
         </div>

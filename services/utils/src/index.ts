@@ -5,6 +5,7 @@ import cloudinary from "cloudinary";
 import uploadRoutes from "./routes/cloudinary.js";
 import { connectRabbitMQ } from "./config/rabbitmq.js";
 import paymentRoutes from "./routes/payment.js";
+import { apiLimiter } from "./middlewares/rateLimiter.js";
 dotenv.config();
 
 
@@ -33,8 +34,8 @@ cloudinary.v2.config({
     api_secret: CLOUDINARY_API_SECRET,
 });
 
-app.use("/api/upload", uploadRoutes);
-app.use("/api/payment", paymentRoutes);
+app.use("/api/upload", apiLimiter, uploadRoutes);
+app.use("/api/payment", apiLimiter, paymentRoutes);
 connectRabbitMQ().catch((err) => console.error("RabbitMQ connection failed:", err));
 
 app.listen(PORT, () => {

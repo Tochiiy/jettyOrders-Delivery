@@ -9,6 +9,7 @@ import addressRoutes from "./routes/address.js";
 import orderRoutes from "./routes/order.js";
 import { connectRabbitMQ } from "./config/rabbitmq.js";
 import { startPaymentConsumer } from "./events/paymentConsumer.js";
+import { apiLimiter } from "./middlewares/rateLimiter.js";
 
 dotenv.config();
 
@@ -25,11 +26,11 @@ app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok" });
 });
 
-app.use("/api/restaurant", restaurantRoutes);
-app.use("/api/menu-item", menuItemRoutes);
-app.use("/api/cart", cartRoutes);
-app.use("/api/address", addressRoutes);
-app.use("/api/order", orderRoutes);
+app.use("/api/restaurant", apiLimiter, restaurantRoutes);
+app.use("/api/menu-item", apiLimiter, menuItemRoutes);
+app.use("/api/cart", apiLimiter, cartRoutes);
+app.use("/api/address", apiLimiter, addressRoutes);
+app.use("/api/order", apiLimiter, orderRoutes);
 
 app.use((req, res) => {
     res.status(404).json({ success: false, message: "Route not found", error: { code: "NOT_FOUND", message: "Route not found" } });

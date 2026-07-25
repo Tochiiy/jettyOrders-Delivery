@@ -33,6 +33,7 @@ const RestaurantDashboard = () => {
 
             if (data.token) {
                 localStorage.setItem("token", data.token);
+                window.dispatchEvent(new Event("token-changed"));
             }
 
             setRestaurant(data.restaurant);
