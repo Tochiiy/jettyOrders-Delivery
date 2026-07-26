@@ -7,7 +7,7 @@ import menuItemRoutes from "./routes/menuitem.js";
 import cartRoutes from "./routes/cart.js";
 import addressRoutes from "./routes/address.js";
 import orderRoutes from "./routes/order.js";
-import internalRoutes from "./routes/internal.js";
+import riderRoutes from "./routes/rider.js";
 import { connectRabbitMQ } from "./config/rabbitmq.js";
 import { startPaymentConsumer } from "./events/paymentConsumer.js";
 import { apiLimiter, internalLimiter } from "./middlewares/rateLimiter.js";
@@ -42,7 +42,7 @@ app.use("/api/menu-item", apiLimiter, menuItemRoutes);
 app.use("/api/cart", apiLimiter, cartRoutes);
 app.use("/api/address", apiLimiter, addressRoutes);
 app.use("/api/order", apiLimiter, orderRoutes);
-app.use("/api/order/internal", internalLimiter, internalRoutes);
+app.use("/api/order/internal", internalLimiter, riderRoutes);
 
 app.use((req, res) => {
     res.status(404).json({ success: false, message: "Route not found", error: { code: "NOT_FOUND", message: "Route not found" } });
