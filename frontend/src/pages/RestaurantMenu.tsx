@@ -3,8 +3,10 @@ import { Link, useParams } from "react-router-dom";
 import { useAppData } from "../context/AppContext";
 import * as restaurantService from "../services/restaurantService";
 import * as menuService from "../services/menuService";
-import { BiChevronLeft, BiMapPin, BiPhone, BiCheckCircle, BiX, BiTime, BiShield, BiTag, BiErrorCircle, BiPlusCircle } from "react-icons/bi";
+import { suggestDish } from "../services/aiService";
+import AISuggestion from "../components/AISuggestion";
 import { toast } from "react-hot-toast";
+import { BiChevronLeft, BiMapPin, BiPhone, BiCheckCircle, BiX, BiTime, BiShield, BiTag, BiErrorCircle, BiPlusCircle } from "react-icons/bi";
 import type { IRestaurant, IMenuItem } from "../types/types";
 
 const RestaurantMenu = () => {
@@ -240,6 +242,23 @@ const RestaurantMenu = () => {
                 </Link>
               </div>
             </div>
+
+            {restaurant && items.length > 0 && (
+              <AISuggestion
+                title="Suggest a Dish"
+                description="Not sure what to order? Let AI pick one for you."
+                placeholder="e.g. 'something light'"
+                buttonText="Suggest"
+                apiCall={(input) =>
+                  suggestDish({
+                    restaurantName: restaurant.name,
+                    menuItems: items.map((i) => i.name),
+                    userContext: input,
+                  })
+                }
+                extractResult={(res) => res.data.suggestion}
+              />
+            )}
           </aside>
         </div>
       </div>

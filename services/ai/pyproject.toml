@@ -11,4 +11,6 @@ dependencies = [
     "langsmith>=0.3",
     "pydantic>=2",
     "pydantic-settings>=2",
+    "pyjwt>=2",
+    "slowapi>=0.1",
 ]

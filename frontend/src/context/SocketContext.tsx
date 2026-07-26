@@ -1,5 +1,5 @@
 import { io, Socket } from "socket.io-client"
-import { createContext, useContext, useEffect, useRef, useSyncExternalStore } from "react"
+import { createContext, useContext, useEffect, useState, useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
 import { useAppData } from "./AppContext"
 import { REALTIME_API } from "../services/api"
@@ -17,7 +17,7 @@ const subscribeToTokenChanges = (callback: () => void) => {
 
 const SocketProvider = ({ children }: { children: ReactNode }) => {
   const { isAuth, user } = useAppData()
-  const socketRef = useRef<Socket | null>(null)
+  const [socket, setSocket] = useState<Socket | null>(null)
 
   const token = useSyncExternalStore(
     subscribeToTokenChanges,
@@ -26,8 +26,8 @@ const SocketProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!isAuth || !token) {
-      socketRef.current?.disconnect()
-      socketRef.current = null
+      socket?.disconnect()
+      setSocket(null)
       return
     }
 
@@ -38,22 +38,22 @@ const SocketProvider = ({ children }: { children: ReactNode }) => {
 
     newSocket.on("connect", () => {
       console.log("Connected to Socket.IO server")
-      socketRef.current = newSocket
+      setSocket(newSocket)
     })
 
-    newSocket.on("disconnect", (reason) => {
-      console.log("Disconnected from Socket.IO server:", reason)
-      socketRef.current = null
+    newSocket.on("disconnect", () => {
+      console.log("Disconnected from Socket.IO server")
+      setSocket(null)
     })
 
     return () => {
       newSocket.disconnect()
-      socketRef.current = null
+      setSocket(null)
     }
   }, [isAuth, user?._id, user?.restaurantId, user?.role, token])
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current }}>
+    <SocketContext.Provider value={{ socket }}>
       {children}
     </SocketContext.Provider>
   )

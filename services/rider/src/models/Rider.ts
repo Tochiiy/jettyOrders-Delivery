@@ -31,6 +31,7 @@ const riderSchema: Schema<IRider> = new mongoose.Schema({
 }, { timestamps: true });
 
 riderSchema.index({ currentLocation: "2dsphere" });
+riderSchema.index({ isAvailable: 1, isVerified: 1, currentLocation: "2dsphere" });
 
 const Rider = mongoose.model<IRider>("Rider", riderSchema);
 export default Rider;

@@ -32,7 +32,7 @@ const getAddresses = TryCatch(async (req: AuthenticatedRequest, res: Response) =
     const user = req.user;
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-    const addresses = await Address.find({ userId: user._id.toString() }).sort({ createdAt: -1 });
+    const addresses = await Address.find({ userId: user._id.toString() }).sort({ createdAt: -1 }).lean();
     res.status(200).json({ addresses });
 });
 

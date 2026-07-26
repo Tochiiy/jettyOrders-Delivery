@@ -30,7 +30,7 @@ const getMyOrders = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
     const user = req.user;
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-    const orders = await Order.find({ userId: user._id.toString(), paymentStatus: "paid" }).sort({ createdAt: -1 });
+    const orders = await Order.find({ userId: user._id.toString(), paymentStatus: "paid" }).sort({ createdAt: -1 }).lean();
     res.status(200).json({ orders });
 });
 
@@ -41,24 +41,28 @@ const createOrder = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
     const { paymentMethod, addressId } = req.body;
     if (!paymentMethod || !addressId) return res.status(400).json({ message: "Payment method and address are required" });
 
-    const address = await Address.findOne({ _id: addressId.toString(), userId: user._id.toString() });
+    const address = await Address.findOne({ _id: addressId.toString(), userId: user._id.toString() }).lean();
     if (!address) return res.status(404).json({ message: "Address not found" });
 
-    const cart = await Cart.findOne({ userId: user._id });
+    const cart = await Cart.findOne({ userId: user._id }).lean();
     if (!cart || cart.items.length === 0) return res.status(400).json({ message: "Cart is empty" });
 
     const firstItem = cart.items[0];
     if (!firstItem.restaurantId) return res.status(400).json({ message: "Cart item missing restaurant" });
 
-    const restaurant = await Restaurant.findById(firstItem.restaurantId);
+    const restaurant = await Restaurant.findById(firstItem.restaurantId).lean();
     if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
     if (!restaurant.isOpen) return res.status(400).json({ message: "Sorry, restaurant is closed" });
+
+    const menuItemIds = cart.items.map(i => i.menuItemId);
+    const menuItems = await MenuItem.find({ _id: { $in: menuItemIds } }).lean();
+    const menuItemMap = new Map(menuItems.map(i => [i._id.toString(), i]));
 
     let subtotal = 0;
     const orderItems = [];
 
     for (const cartItem of cart.items) {
-        const menuItem = await MenuItem.findById(cartItem.menuItemId);
+        const menuItem = menuItemMap.get(cartItem.menuItemId.toString());
         if (!menuItem) return res.status(404).json({ message: `Menu item ${cartItem.menuItemId} not found` });
 
         const itemTotal = menuItem.price * cartItem.quantity;
@@ -125,7 +129,7 @@ const fetchOrderForPayment = TryCatch(async (req: AuthenticatedRequest, res: Res
     }
 
     const { orderId } = req.params;
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(orderId).lean();
     if (!order) return res.status(404).json({ message: "Order not found" });
     if (order.paymentStatus === "paid") {
         return res.status(400).json({ message: "Order already paid" });
@@ -142,7 +146,7 @@ const fetchRestaurantOrders = TryCatch(async (req: AuthenticatedRequest, res: Re
     if (!restaurantId) return res.status(400).json({ message: "Restaurant ID is required" });
     
     const  limit = req.query.limit ?  Number(req.query.limit): 0;
-    const orders = await Order.find({ restaurantId, paymentStatus: "paid" }).sort({ createdAt: -1 }).limit(limit);
+    const orders = await Order.find({ restaurantId, paymentStatus: "paid" }).sort({ createdAt: -1 }).limit(limit).lean();
 
     return res.status(200).json({ 
         success: true,
@@ -169,7 +173,7 @@ const updateOrderStatus = TryCatch(async (req: AuthenticatedRequest, res: Respon
     if (!order) return res.status(404).json({ message: "Order not found" });
     if (order.paymentStatus !== "paid") return res.status(400).json({ message: "Order is not paid" });
 
-    const restaurant = await Restaurant.findById(order.restaurantId);
+    const restaurant = await Restaurant.findById(order.restaurantId).lean();
     if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
     if (restaurant.ownerId !== user._id.toString()) return res.status(403).json({ message: "Not allowed to update your restaurant's order" });
 
@@ -194,10 +198,10 @@ const updateOrderStatus = TryCatch(async (req: AuthenticatedRequest, res: Respon
     }
 
 
-    const statusToEvent: Record<string, "ORDER_ACCEPTED" | "ORDER_PREPARING" | "ORDER_READY_FOR_PICKUP"> = {
+    const statusToEvent: Record<string, "ORDER_ACCEPTED" | "ORDER_PREPARING" | "ORDER_READY_FOR_RIDER"> = {
         accepted: "ORDER_ACCEPTED",
         preparing: "ORDER_PREPARING",
-        ready_for_rider: "ORDER_READY_FOR_PICKUP",
+        ready_for_rider: "ORDER_READY_FOR_RIDER",
     };
 
     await publishOrderEvent({
@@ -224,7 +228,7 @@ const fetchSingleOrder = TryCatch(async (req: AuthenticatedRequest, res: Respons
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
     const { orderId } = req.params;
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(orderId).lean();
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     if (order.userId !== user._id.toString()) return res.status(403).json({ message: "Not your order" });
@@ -239,7 +243,7 @@ const assignRiderToOrder = TryCatch(async (req: AuthenticatedRequest, res: Respo
 
     const { orderId, riderId, riderName, riderPhone, riderImage } = req.body;
 
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(orderId).lean();
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     if (order.riderId !== null) {
@@ -320,7 +324,7 @@ const getCurrentOrdersForRider = TryCatch(async (req: AuthenticatedRequest, res:
     const orders = await Order.find({
         riderId,
         status: { $nin: ["delivered", "canceled"] },
-    }).sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 }).lean();
 
     return res.status(200).json({ success: true, orders });
 })

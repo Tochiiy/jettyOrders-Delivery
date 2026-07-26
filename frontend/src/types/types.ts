@@ -80,7 +80,7 @@ export interface IDeliveryAddress {
     longitude: number;
 }
 
-export type OrderStatus = "placed" | "accepted" | "preparing" | "ready_for_pickup" | "rider_assigned" | "pickedUp" | "canceled" | "delivered";
+export type OrderStatus = "placed" | "accepted" | "preparing" | "ready_for_rider" | "rider_assigned" | "pickedUp" | "canceled" | "delivered";
 
 export type PaymentStatus = "paid" | "unpaid";
 

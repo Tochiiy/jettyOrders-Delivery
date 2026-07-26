@@ -7,6 +7,23 @@ import { AuthenticatedRequest } from "../middlewares/isAuth.js";
 import oauth2Client from "../config/googleConfig.js";
 import crypto from "crypto";
 
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!;
+
+const generateAccessToken = (userId: string, restaurantId?: string) =>
+    jwt.sign({ userId, restaurantId }, process.env.JWT_SECRET!, { expiresIn: "7d" });
+
+const generateRefreshToken = () => crypto.randomBytes(40).toString("hex");
+
+const hashToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
+
+const issueTokens = async (user: any) => {
+    const accessToken = generateAccessToken(user._id.toString(), user.restaurantId);
+    const refreshToken = generateRefreshToken();
+    user.refreshToken = hashToken(refreshToken);
+    await user.save();
+    return { accessToken, refreshToken };
+};
+
 const loginUser = TryCatch(async (req, res) => {
     const { code, email, password } = req.body;
 
@@ -31,15 +48,12 @@ const loginUser = TryCatch(async (req, res) => {
             });
         }
 
-        const token = jwt.sign(
-            { userId: user._id, restaurantId: user.restaurantId },
-            process.env.JWT_SECRET as string,
-            { expiresIn: "7d" }
-        );
+        const { accessToken, refreshToken } = await issueTokens(user);
 
         res.status(200).json({
             message: "login user successfully",
-            token,
+            token: accessToken,
+            refreshToken,
             user,
         });
         return;
@@ -47,7 +61,7 @@ const loginUser = TryCatch(async (req, res) => {
 
     // Email/password login
     if (email && password) {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).lean();
         if (!user || !user.password) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
@@ -56,13 +70,9 @@ const loginUser = TryCatch(async (req, res) => {
         const match = await bcrypt.compare(password, user.password);
         if (!match) return res.status(401).json({ message: "Invalid credentials" });
 
-        const token = jwt.sign(
-            { userId: user._id, restaurantId: user.restaurantId },
-            process.env.JWT_SECRET as string,
-            { expiresIn: "7d" }
-        );
+        const { accessToken, refreshToken } = await issueTokens(user);
 
-        res.status(200).json({ message: "login user successfully", token, user });
+        res.status(200).json({ message: "login user successfully", token: accessToken, refreshToken, user });
         return;
     }
 
@@ -94,13 +104,9 @@ if(!req.user?._id) {
         return res.status(404).json({ message: "User not found" });
     }
 
-    const token = jwt.sign(
-        { userId: user._id, restaurantId: user.restaurantId },
-        process.env.JWT_SECRET as string,
-        { expiresIn: "7d" }
-    );
+    const { accessToken, refreshToken } = await issueTokens(user);
 
-    res.status(200).json({ message: "Role added successfully", token, user });
+    res.status(200).json({ message: "Role added successfully", token: accessToken, refreshToken, user });
 });
 
 
@@ -120,15 +126,15 @@ const registerUser = TryCatch(async (req, res) => {
         return res.status(400).json({ message: "Name, email and password are required" });
     }
 
-    const existing = await User.findOne({ email });
+    const existing = await User.findOne({ email }).lean();
     if (existing) return res.status(400).json({ message: "User already exists" });
 
     const bcrypt = (await import('bcryptjs')).default;
     const hash = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, password: hash, image: "" });
 
-    const token = jwt.sign({ userId: user._id, restaurantId: user.restaurantId }, process.env.JWT_SECRET as string, { expiresIn: "7d" });
-    res.status(201).json({ message: "User registered", token, user });
+    const { accessToken, refreshToken } = await issueTokens(user);
+    res.status(201).json({ message: "User registered", token: accessToken, refreshToken, user });
 });
 
 const forgotPassword = TryCatch(async (req, res) => {
@@ -204,8 +210,7 @@ const forgotPassword = TryCatch(async (req, res) => {
         return res.status(200).json({ message: "Reset link sent if the email exists" });
     }
 
-    // No SMTP configured — return token in response for dev/testing
-    return res.status(200).json({ message: "Reset token generated (no SMTP configured)", token });
+    return res.status(200).json({ message: "If that email exists, a reset link was sent" });
 });
 
 const resetPassword = TryCatch(async (req, res) => {
@@ -228,4 +233,29 @@ const resetPassword = TryCatch(async (req, res) => {
 
 
 
-export { loginUser, addUserRole, myProfile, registerUser, forgotPassword, resetPassword };
+const refreshUserToken = TryCatch(async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return res.status(400).json({ message: "Refresh token required" });
+
+    const hashed = hashToken(refreshToken);
+    const user = await User.findOne({ refreshToken: hashed });
+    if (!user) return res.status(401).json({ message: "Invalid refresh token" });
+
+    const { accessToken, refreshToken: newRefreshToken } = await issueTokens(user);
+
+    res.status(200).json({
+        message: "Token refreshed",
+        token: accessToken,
+        refreshToken: newRefreshToken,
+        user,
+    });
+});
+
+const logoutUser = TryCatch(async (req: AuthenticatedRequest, res) => {
+    if (!req.user?._id) return res.status(401).json({ message: "Unauthorized" });
+
+    await User.findByIdAndUpdate(req.user._id, { refreshToken: null });
+    res.status(200).json({ message: "Logged out" });
+});
+
+export { loginUser, addUserRole, myProfile, registerUser, forgotPassword, resetPassword, refreshUserToken, logoutUser };

@@ -28,7 +28,7 @@ export const getMyRestaurant = () =>
 
 export const createRestaurant = (formData: FormData) =>
     axios.post(`${API}/api/restaurant/new`, formData, {
-        headers: { ...authHeaders(), "Content-Type": "multipart/form-data" },
+        headers: authHeaders(),
     });
 
 export const editRestaurant = (data: { name: string; description: string }) =>

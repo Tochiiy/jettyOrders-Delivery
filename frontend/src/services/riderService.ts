@@ -6,7 +6,7 @@ export const getMyProfile = () =>
 
 export const registerRider = (formData: FormData) =>
     axios.post(`${API}/api/rider/register`, formData, {
-        headers: { ...authHeaders(), "Content-Type": "multipart/form-data" },
+        headers: authHeaders(),
     });
 
 export const updateLocation = (latitude: number, longitude: number) =>

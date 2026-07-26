@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import { Toaster } from 'react-hot-toast'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
+import ErrorBoundary from './components/ErrorBoundary'
 import SelectRole from './pages/SelectRole'
 import Navbar from './components/Navbar'
 import Account from './components/Account'
@@ -23,6 +24,7 @@ import ResetPassword from './pages/ResetPassword'
 const App = () => {
   return (
     <BrowserRouter>
+      <ErrorBoundary>
       <Navbar />
       <Routes>
         <Route element={<ProtectedRoute />}>
@@ -47,6 +49,7 @@ const App = () => {
         <Route path="/menu/:restaurantId" element={<PublicMenu />} />
       </Routes>
       <Toaster />
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }

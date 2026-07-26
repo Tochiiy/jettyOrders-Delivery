@@ -8,34 +8,42 @@ import paymentRoutes from "./routes/payment.js";
 import { apiLimiter } from "./middlewares/rateLimiter.js";
 dotenv.config();
 
+const REQUIRED_ENV = ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "RABBITMQ_URL", "INTERNAL_SERVICE_KEY", "RESTAURANT_SERVICE"];
+for (const key of REQUIRED_ENV) {
+    if (!process.env[key]) {
+        console.error(`Missing required env var: ${key}`);
+        process.exit(1);
+    }
+}
 
-    
 const app = express();
 
 const PORT = process.env.PORT || 5002;
 
-app.use(cors());
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(cors({
+    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    credentials: true,
+}));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok" });
 });
-const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
-
-if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
-    console.error("Missing Cloudinary credentials");
-    process.exit(1);
-}
 
 cloudinary.v2.config({
-    cloud_name: CLOUDINARY_CLOUD_NAME,
-    api_key: CLOUDINARY_API_KEY,
-    api_secret: CLOUDINARY_API_SECRET,
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+    api_key: process.env.CLOUDINARY_API_KEY!,
+    api_secret: process.env.CLOUDINARY_API_SECRET!,
 });
 
 app.use("/api/upload", apiLimiter, uploadRoutes);
 app.use("/api/payment", apiLimiter, paymentRoutes);
+
+app.use((req, res) => {
+    res.status(404).json({ message: "Route not found" });
+});
+
 connectRabbitMQ().catch((err) => console.error("RabbitMQ connection failed:", err));
 
 app.listen(PORT, () => {

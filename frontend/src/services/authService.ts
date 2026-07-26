@@ -21,3 +21,9 @@ export const forgotPassword = (email: string) =>
 
 export const resetPassword = (token: string, email: string, newPassword: string) =>
     axios.post(`${API}/api/auth/reset-password`, { token, email, newPassword });
+
+export const refreshAccessToken = (refreshToken: string) =>
+    axios.post(`${API}/api/auth/refresh`, { refreshToken });
+
+export const logoutUser = () =>
+    axios.post(`${API}/api/auth/logout`, {}, { headers: authHeaders() });

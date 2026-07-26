@@ -3,16 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { useAppData } from "../context/AppContext";
 import { useSocket } from "../context/SocketContext";
 import * as orderService from "../services/orderService";
+import { generateReview } from "../services/aiService";
+import AISuggestion from "../components/AISuggestion";
 import type { IOrder } from "../types/types";
 import { BiArrowBack, BiPackage, BiBus, BiCreditCard, BiTag, BiTime, BiCheckCircle } from "react-icons/bi";
 
-const ACTIVE_STATUSES = ["placed", "accepted", "preparing", "ready_for_pickup", "ready_for_rider", "rider_assigned", "pickedUp"]
+const ACTIVE_STATUSES = ["placed", "accepted", "preparing", "ready_for_rider", "rider_assigned", "pickedUp"]
 
 const statusColor: Record<string, string> = {
     placed: "text-blue-600 bg-blue-100",
     accepted: "text-indigo-600 bg-indigo-100",
     preparing: "text-yellow-600 bg-yellow-100",
-    ready_for_pickup: "text-orange-600 bg-orange-100",
     ready_for_rider: "text-purple-600 bg-purple-100",
     rider_assigned: "text-purple-600 bg-purple-100",
     pickedUp: "text-cyan-600 bg-cyan-100",
@@ -25,7 +26,6 @@ const statusLabel: Record<string, string> = {
     placed: "Placed",
     accepted: "Accepted",
     preparing: "Preparing",
-    ready_for_pickup: "Ready for Pickup",
     ready_for_rider: "Ready for Rider",
     rider_assigned: "Rider Assigned",
     pickedUp: "Picked Up",
@@ -195,15 +195,35 @@ const MyOrders = () => {
 
 const OrderRow = ({order, onClick}: {order: IOrder, onClick: () => void}) => {
     return (
-        <div onClick={onClick} className="cursor-pointer rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                <div>
-                    <h2 className="text-lg font-semibold text-slate-900">{order.restaurantName}</h2>
-                    <p className="mt-1 text-xs text-slate-400">Order #{order._id.slice(-8)}</p>
+        <div>
+            <div onClick={onClick} className="cursor-pointer rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div>
+                        <h2 className="text-lg font-semibold text-slate-900">{order.restaurantName}</h2>
+                        <p className="mt-1 text-xs text-slate-400">Order #{order._id.slice(-8)}</p>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColor[order.status] || "text-slate-600 bg-slate-100"}`}>
+                        {statusLabel[order.status] || order.status}
+                    </span>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColor[order.status] || "text-slate-600 bg-slate-100"}`}>
-                    {statusLabel[order.status] || order.status}
-                </span>
+                {order.status === "delivered" && (
+                    <div className="mt-4" onClick={(e) => e.stopPropagation()}>
+                        <AISuggestion
+                            title="Generate Review"
+                            description="Write an AI-generated review based on your order."
+                            placeholder="Any feedback to include? (optional)"
+                            buttonText="Generate"
+                            apiCall={(input) =>
+                                generateReview({
+                                    restaurantName: order.restaurantName,
+                                    items: order.items.map((i) => i.name),
+                                    feedback: input,
+                                })
+                            }
+                            extractResult={(res) => res.data.review || res.data.suggestion}
+                        />
+                    </div>
+                )}
             </div>
         </div>
      )

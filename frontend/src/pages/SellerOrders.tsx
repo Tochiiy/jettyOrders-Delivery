@@ -28,8 +28,8 @@ interface Order {
 const statusFlow: Record<string, string[]> = {
     placed: ["accepted", "cancelled"],
     accepted: ["preparing", "cancelled"],
-    preparing: ["ready_for_pickup", "cancelled"],
-    ready_for_pickup: ["rider_assigned"],
+    preparing: ["ready_for_rider", "cancelled"],
+    ready_for_rider: ["rider_assigned"],
     rider_assigned: ["pickedUp"],
     pickedUp: ["delivered"],
 };
@@ -38,7 +38,7 @@ const statusLabel: Record<string, string> = {
     placed: "Placed",
     accepted: "Accept",
     preparing: "Preparing",
-    ready_for_pickup: "Ready for Pickup",
+    ready_for_rider: "Ready for Rider",
     rider_assigned: "Assign Rider",
     pickedUp: "Picked Up",
     delivered: "Delivered",
@@ -49,7 +49,7 @@ const statusBadge: Record<string, string> = {
     placed: "text-blue-600 bg-blue-100",
     accepted: "text-indigo-600 bg-indigo-100",
     preparing: "text-yellow-600 bg-yellow-100",
-    ready_for_pickup: "text-orange-600 bg-orange-100",
+    ready_for_rider: "text-purple-600 bg-purple-100",
     rider_assigned: "text-purple-600 bg-purple-100",
     pickedUp: "text-cyan-600 bg-cyan-100",
     delivered: "text-green-600 bg-green-100",

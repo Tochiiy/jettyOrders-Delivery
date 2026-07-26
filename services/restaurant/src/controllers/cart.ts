@@ -23,7 +23,7 @@ const getCart = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
     const user = req.user;
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-    const cart = await Cart.findOne({ userId: user._id });
+    const cart = await Cart.findOne({ userId: user._id }).lean();
     const responseCart = cart || { items: [] };
     const subtotal = calculateCartTotal(responseCart.items);
     const { platformFee, deliveryFee, grandTotal } = calculateFees(subtotal);
@@ -42,7 +42,7 @@ const addCartItem = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
         return res.status(400).json({ message: "Quantity must be a positive number" });
     }
 
-    const menuItem = await MenuItem.findById(menuItemId);
+    const menuItem = await MenuItem.findById(menuItemId).lean();
     if (!menuItem) return res.status(404).json({ message: "Menu item not found" });
     if (!menuItem.isAvailable) return res.status(400).json({ message: "Menu item is not available" });
 
@@ -60,7 +60,7 @@ const addCartItem = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
     }
 
 
-    const existingCart = await Cart.findOne({ userId: user._id });
+    const existingCart = await Cart.findOne({ userId: user._id }).lean();
     if (existingCart && existingCart.items.length > 0) {
         const existingRestaurantId = existingCart.items[0].restaurantId?.toString();
         if (existingRestaurantId && existingRestaurantId !== menuItem.restaurantId.toString()) {
@@ -70,7 +70,7 @@ const addCartItem = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
         }
     }
 
-    const restaurant = await Restaurant.findById(menuItem.restaurantId);
+    const restaurant = await Restaurant.findById(menuItem.restaurantId).lean();
 
     
     cart = await Cart.findOneAndUpdate(
@@ -140,7 +140,7 @@ const removeCartItem = TryCatch(async (req: AuthenticatedRequest, res: Response)
 
     const { menuItemId } = req.params;
 
-    const cart = await Cart.findOne({ userId: user._id });
+    const cart = await Cart.findOne({ userId: user._id }).lean();
     if (!cart) return res.status(404).json({ message: "Cart not found" });
 
     const itemExists = cart.items.some((item) => item.menuItemId.toString() === menuItemId);

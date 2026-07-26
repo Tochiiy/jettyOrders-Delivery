@@ -37,8 +37,33 @@ const AppProviderInner = ({ children }: { children: ReactNode }) => {
             setUser(fetchedUser);
             setIsAuth(true);
             if (fetchedUser.role === "customer") await fetchCart();
-        } catch (error) {
-            console.error("Error fetching user:", error);
+        } catch (error: any) {
+            if (error?.response?.status === 401) {
+                const refreshToken = localStorage.getItem("refreshToken");
+                if (refreshToken) {
+                    try {
+                        const { data: refreshData } = await authService.refreshAccessToken(refreshToken);
+                        localStorage.setItem("token", refreshData.token);
+                        localStorage.setItem("refreshToken", refreshData.refreshToken);
+                        window.dispatchEvent(new Event("token-changed"));
+                        const { data: retryData } = await authService.fetchMe();
+                        setUser(retryData.user);
+                        setIsAuth(true);
+                        if (retryData.user.role === "customer") await fetchCart();
+                        setLoading(false);
+                        return;
+                    } catch {
+                        localStorage.removeItem("token");
+                        localStorage.removeItem("refreshToken");
+                        setUser(null);
+                        setIsAuth(false);
+                    }
+                } else {
+                    localStorage.removeItem("token");
+                    setUser(null);
+                    setIsAuth(false);
+                }
+            }
         } finally {
             setLoading(false);
         }

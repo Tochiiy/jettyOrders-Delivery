@@ -6,7 +6,7 @@ const TryCatch = (handler: RequestHandler): RequestHandler => {
             await handler(req, res, next);
         } catch (error: any) {
             console.error("TryCatch Error:", error);
-            res.status(500).json({ message: error.message || "Server error" });
+            res.status(500).json({ message: "Server error" });
         }
     }
 }

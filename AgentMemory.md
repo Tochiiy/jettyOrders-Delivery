@@ -1,6 +1,6 @@
 # AgentMemory.md — JettyOrders-Delivery Project State
 
-## Last Updated: July 26, 2026
+## Last Updated: July 26, 2026 — Session: Refresh token rotation, distance fix, docs sync
 
 ---
 
@@ -41,18 +41,19 @@ Food delivery platform with 5 microservices + React/Vite/TypeScript frontend.
 
 **Address** — userId, mobile, formattedAddress, location (GeoJSON Point + 2dsphere index)
 
-**Order** — userId, restaurantId, items[{ name, menuItemId, price, quantity }], subtotal, deliveryFee, platformFee, totalAmount, riderId/Name/Phone, distance, riderAmount, addressId, deliveryAddress, status enum ("placed"→"delivered"), paymentMethod ("stripe"), paymentStatus ("paid"|"unpaid"), expiresAt (TTL index, 15min)
+**Order** — userId, restaurantId, items[{ name, menuItemId, price, quantity }], subtotal, deliveryFee, platformFee, totalAmount, riderId/Name/Phone, distance, riderAmount, addressId, deliveryAddress, status enum (placed→accepted→preparing→ready_for_rider→rider_assigned→pickedUp→delivered/canceled), paymentMethod ("stripe"), paymentStatus ("paid"|"unpaid"), expiresAt (TTL index, 15min)
 
 ---
 
 ## Backend Endpoints
 
-### Auth Service (`/api/auth`)
+### Auth Service (`/api/auth`) — returns `token` + `refreshToken`
 | Method | Path               | Auth | Description            |
 |--------|--------------------|------|------------------------|
 | POST   | `/register`        | No   | Email/password register |
-| POST   | `/login`           | No   | Email/password login   |
-| POST   | `/login/google`    | No   | Google OAuth           |
+| POST   | `/login`           | No   | Email/password or Google OAuth |
+| POST   | `/refresh`         | No   | Rotate refresh token (returns new pair) |
+| POST   | `/logout`          | Yes  | Clear stored refresh token |
 | GET    | `/me`              | Yes  | Fetch current user     |
 | POST   | `/add/role`        | Yes  | Assign role            |
 | POST   | `/forgot-password` | No   | Send reset email via SMTP |
@@ -122,7 +123,7 @@ Food delivery platform with 5 microservices + React/Vite/TypeScript frontend.
 | POST   | `/create-payment-intent`    | No   | Create Stripe PaymentIntent          |
 | POST   | `/confirm`                  | No   | Confirm payment (verifies Stripe)    |
 
-### AI Service (`/api/ai`)
+### AI Service (`/api/ai`) — Auth: JWT Bearer, Rate Limit: 10/min per endpoint (slowapi)
 | Method | Path                    | Description                        |
 |--------|-------------------------|------------------------------------|
 | POST   | `/suggest-dish`         | Suggest a dish from menu context   |
@@ -152,7 +153,6 @@ Food delivery platform with 5 microservices + React/Vite/TypeScript frontend.
 
 | File                        | Route                  | Auth      | Description                    |
 |-----------------------------|------------------------|-----------|--------------------------------|
-| `Homepage.tsx`              | `/`                    | Protected | Nearby restaurants with verified toggle |
 | `Login.tsx`                 | `/login`               | Public    | Google OAuth + email/password  |
 | `SelectRole.tsx`            | `/select-role`         | Protected | Role selection                 |
 | `Restuarant.tsx`            | `/seller/add`          | Protected + Seller | Seller dashboard      |
@@ -167,6 +167,9 @@ Food delivery platform with 5 microservices + React/Vite/TypeScript frontend.
 | `ResetPassword.tsx`         | `/reset-password`      | Public    | Password reset form            |
 | `Account.tsx`               | —                      | Component                  | User dropdown                  |
 | `RiderDashboard.tsx`        | `/rider/dashboard`     | Protected + Rider         | Registration, profile, availability toggle, available orders, active deliveries (sound: `software-interface-257.wav`) |
+| `RestaurantMenu.tsx`        | N/A (component)       | —                        | Full menu page with AI "Suggest a Dish" sidebar |
+| `Homepage.tsx`              | `/`                   | Protected                | Nearby restaurants + AI "Restaurant Recommendations" section |
+| `MyOrders.tsx`              | `/my-orders`          | Protected                | Customer order history with AI "Generate Review" per delivered order |
 
 ---
 
@@ -180,6 +183,7 @@ Food delivery platform with 5 microservices + React/Vite/TypeScript frontend.
 | `AddMenuItem.tsx`      | Menu item create form                    |
 | `MenuItems.tsx`        | List with expand, edit, toggle, delete   |
 | `RestuarantOrder.tsx`  | Seller order list + real-time new order notifications (sound: `notification-951.wav`) |
+| `AISuggestion.tsx`     | Reusable AI suggestion card (amber/orange gradient, BiStar icon) with internal loading/error/result state |
 | `ProtectedRoute.tsx`   | Redirect to `/login` if no token         |
 | `PublicRoute.tsx`      | Redirect to `/` if logged in             |
 
@@ -224,12 +228,12 @@ Food delivery platform with 5 microservices + React/Vite/TypeScript frontend.
 ---
 
 ## Rate Limiting
-- All 5 backend services use `express-rate-limit`:
-  - **Auth**: `authLimiter` — 20 req/15min on login, register, forgot/reset-password; `apiLimiter` — 100 req/15min on all auth routes
-  - **Restaurant**: `apiLimiter` — 100 req/15min on all routes
-  - **Utils**: `apiLimiter` — 100 req/15min on all routes
-  - **Rider**: `apiLimiter` — 100 req/15min on rider routes; `internalLimiter` — 200 req/1min on internal routes
-  - **Realtime**: `apiLimiter` — 100 req/15min on API; `internalLimiter` — 200 req/1min on internal emit
+- **Auth**: `authLimiter` — 20 req/15min on login, register, forgot/reset-password; `apiLimiter` — 100 req/15min on all auth routes (express-rate-limit)
+  - **Restaurant**: `apiLimiter` — 100 req/15min on all routes (express-rate-limit)
+  - **Utils**: `apiLimiter` — 100 req/15min on all routes (express-rate-limit)
+  - **Rider**: `apiLimiter` — 100 req/15min on rider routes; `internalLimiter` — 200 req/1min on internal routes (express-rate-limit)
+  - **Realtime**: `apiLimiter` — 100 req/15min on API; `internalLimiter` — 200 req/1min on internal emit (express-rate-limit)
+  - **AI**: 10 req/min per endpoint (slowapi)
 
 ## RabbitMQ Eventing
 
@@ -254,6 +258,10 @@ Both services use a `ready` promise pattern in `config/rabbitmq.ts` to prevent r
 - **Location**: `services/ai/`
 - **Framework**: FastAPI + LangChain + Groq (llama-3.3-70b-versatile)
 - **LangSmith**: Tracing enabled for `jettyOrders-Delivery` project
+- **Auth**: JWT Bearer token verification (HS256) via `auth.py` middleware on all routes
+- **Rate limiting**: 10 requests/min per endpoint via `slowapi`
+- **Startup validation**: fails early if `GROQ_API_KEY` or `JWT_SECRET` missing
+- **Field alignment**: Pydantic models accept camelCase from frontend via `Field(alias=...)`
 - **Routes**: `suggest-dish`, `suggest-restaurants`, `generate-review`
 - **Pattern**: Frontend passes context → AI returns text — no DB access
 
@@ -264,6 +272,7 @@ All services import from a single `services/api.ts`:
 - `RESTAURANT_API`, `UTILS_API`, `AUTH_API`, `AI_API`, `REALTIME_API`
 - `RIDER_API` — `http://localhost:5004`
 - `authHeaders()` — Bearer token helper
+- `refreshToken` stored in `localStorage` alongside `token`; auto-refresh on 401 in AppContext
 
 ---
 
@@ -271,8 +280,8 @@ All services import from a single `services/api.ts`:
 
 ### Auth (`services/auth/.env`)
 ```
-PORT=5000, MONGO_URI, JWT_SECRET, GOOGLE_CLIENT_ID/SECRET,
-SMTP_HOST/PORT/USER/PASS/FROM
+PORT=5000, MONGO_URI, JWT_SECRET, JWT_REFRESH_SECRET (optional, falls back to JWT_SECRET),
+GOOGLE_CLIENT_ID/SECRET, SMTP_HOST/PORT/USER/PASS/FROM
 ```
 
 ### Restaurant (`services/restaurant/.env`)
@@ -290,7 +299,7 @@ STRIPE_SECRET_KEY
 
 ### AI (`services/ai/.env`)
 ```
-PORT=5003, GROQ_API_KEY, LANGSMITH_TRACING, LANGSMITH_API_KEY
+PORT=5003, GROQ_API_KEY, JWT_SECRET, LANGSMITH_TRACING, LANGSMITH_API_KEY
 ```
 
 ### Rider (`services/rider/.env`)
@@ -340,16 +349,22 @@ cd frontend && npm run dev
 ---
 
 ## Known Issues / TODOs
-- ~~[ ] Mongoose deprecation: `new: true` → `returnDocument: "after"` in order.ts + rider.ts~~ **(done)**
-- [ ] Distance hardcoded as `1` in Order.tsx — calculate from lat/lng
-- [ ] Order history page for customers (`/orders`)
-- ~~[ ] `BrowseMenu` cart is UI-only — no persistence~~ **(confirmed working — calls addToCart → backend API)**
-- [ ] `Sales` tab in seller dashboard is placeholder
-- ~~[ ] No rate limiting / validation middleware~~ **(done — `express-rate-limit` on all 5 services)**
+### Fixed (this session)
+- ~~[ ] Refresh token rotation — added `refreshToken` field to User model, `POST /auth/refresh` and `POST /auth/logout` endpoints, token rotation with hashed storage, auto-refresh on 401 in AppContext~~ **(done)**
+- ~~[ ] Distance hardcoded as `1` — was already correctly calculated via Haversine formula in order.ts (AgentMemory was stale)~~ **(already fixed)**
+- ~~[ ] `ready_for_pickup` status ambiguity — removed from model, types, all pages, unified to `ready_for_rider`~~ **(done)**
+- ~~[ ] `ORDER_READY_FOR_PICKUP` event name mismatch with status — renamed to `ORDER_READY_FOR_RIDER`~~ **(done)**
+- ~~[ ] AI service no JWT auth — added `verify_token` middleware via `auth.py`~~ **(done)**
+- ~~[ ] AI service no rate limiting — added `slowapi` 10/min per endpoint~~ **(done)**
+- ~~[ ] AI service no startup env validation — fails early if `GROQ_API_KEY`/`JWT_SECRET` missing~~ **(done)**
+- ~~[ ] Frontend AI integration missing — built `AISuggestion` component, mounted in 3 pages~~ **(done)**
+- ~~[ ] Sound files swapped/confused — `notification-951.wav` → restaurant, `software-interface-257.wav` → rider~~ **(done)**
+- ~~[ ] `RESTUARANT_SERVICE` typo in `utils/src/events/paymentHeader.ts`~~ **(done)**
+- ~~[ ] Env var validation only covered 5 services — added AI service, now all 6~~ **(done)**
+
+### Remaining
 - [ ] No tests
-- ~~[ ] **Socket does not reconnect when JWT token changes** — after creating a restaurant, the new JWT (with restaurantId) is saved to localStorage but the existing Socket.IO connection still uses the old token, so the seller doesn't join the `restaurant-{id}` room until a page reload~~ **(done — useSyncExternalStore + custom `token-changed` event in SocketContext)**
-- ~~[ ] Seller order management UI is basic — only shows order IDs, no status update controls yet~~ **(already has status update controls in RestaurantOrders)**
-- ~~[ ] Rider service has no frontend yet~~ **(done: RiderDashboard.tsx with profile, availability, available orders, active deliveries, sound notification)**
+- [ ] `Sales` tab in seller dashboard is placeholder
 
 ---
 
@@ -361,7 +376,7 @@ JettyOrders-Delivery/
 │   │   ├── pyproject.toml
 │   │   ├── .env
 │   │   └── src/
-│   │       ├── main.py, config.py, agents.py
+│   │       ├── main.py, config.py, agents.py, auth.py
 │   ├── auth/src/
 │   │   ├── controllers/auth.ts
 │   │   ├── middlewares/rateLimiter.ts
@@ -396,8 +411,8 @@ JettyOrders-Delivery/
 │       ├── routes/payment.ts, cloudinary.ts
 │       └── index.ts
 └── frontend/src/
-    ├── components/ (Navbar, Account, AddResturant, RestuarantProfile, AddMenuItem, MenuItems, RestuarantOrder, ProtectedRoute, PublicRoute)
-    ├── pages/ (Homepage, Login, SelectRole, Restuarant, RestuarantPage, PublicMenu, BrowseMenu, Cart, Address, Order, Checkout, OrderConfirmation, ResetPassword, RiderDashboard)
+    ├── components/ (Navbar, Account, AddResturant, RestuarantProfile, AddMenuItem, MenuItems, RestuarantOrder, AISuggestion, ProtectedRoute, PublicRoute)
+    ├── pages/ (Homepage, Login, SelectRole, Restuarant, RestuarantPage, PublicMenu, BrowseMenu, Cart, Address, Order, Checkout, OrderConfirmation, ResetPassword, RiderDashboard, RestaurantMenu, MyOrders)
     ├── services/ (api.ts, authService, restaurantService, menuService, cartService, addressService, orderService, paymentService, aiService, realtimeService, riderService)
     ├── context/ (AppContext, CartContext, SocketContext)
     ├── assets/notification-951.wav

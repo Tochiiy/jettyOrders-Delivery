@@ -24,7 +24,7 @@ const registerRider = TryCatch(async (req: AuthenticatedRequest, res: Response) 
         return;
     }
 
-    const existing = await Rider.findOne({ userId: String(user._id) });
+    const existing = await Rider.findOne({ userId: String(user._id) }).lean();
     if (existing) {
         res.status(400).json({ message: "Rider profile already exists" });
         return;
@@ -69,7 +69,7 @@ const getMyProfile = TryCatch(async (req: AuthenticatedRequest, res: Response) =
         return;
     }
 
-    const rider = await Rider.findOne({ userId: String(user._id) });
+    const rider = await Rider.findOne({ userId: String(user._id) }).lean();
     if (!rider) {
         res.status(404).json({ message: "Rider profile not found" });
         return;
@@ -154,7 +154,7 @@ const acceptOrder = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
 
     const { orderId } = req.params;
 
-    const rider = await Rider.findOne({ userId: String(user._id), isAvailable: true });
+    const rider = await Rider.findOne({ userId: String(user._id), isAvailable: true }).lean();
     if (!rider) return res.status(404).json({ message: "Rider not found or not available" });
 
     try {

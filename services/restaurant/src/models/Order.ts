@@ -35,7 +35,6 @@ interface IOrder extends Document {
         | "placed"
         | "accepted"
         | "preparing"
-        | "ready_for_pickup"
         | "ready_for_rider"
         | "rider_assigned"
         | "pickedUp"
@@ -87,7 +86,6 @@ const orderSchema: Schema<IOrder> = new Schema(
                 "placed",
                 "accepted",
                 "preparing",
-                "ready_for_pickup",
                 "ready_for_rider",
                 "rider_assigned",
                 "pickedUp",
@@ -103,6 +101,11 @@ const orderSchema: Schema<IOrder> = new Schema(
     { timestamps: true }
 )
 
+
+orderSchema.index({ userId: 1, paymentStatus: 1 });
+orderSchema.index({ restaurantId: 1, paymentStatus: 1, createdAt: -1 });
+orderSchema.index({ riderId: 1, status: 1 });
+orderSchema.index({ status: 1, expiresAt: 1 });
 
 const Order = mongoose.model<IOrder>("Order", orderSchema);
 export default Order;

@@ -15,12 +15,12 @@ export const getPublicMenuItems = (restaurantId: string) =>
 
 export const createMenuItem = (formData: FormData) =>
     axios.post(`${API}/api/menu-item/new`, formData, {
-        headers: { ...authHeaders(), "Content-Type": "multipart/form-data" },
+        headers: authHeaders(),
     });
 
 export const updateMenuItem = (id: string, formData: FormData) =>
     axios.put(`${API}/api/menu-item/${id}`, formData, {
-        headers: { ...authHeaders(), "Content-Type": "multipart/form-data" },
+        headers: authHeaders(),
     });
 
 export const toggleMenuItemStatus = (id: string) =>

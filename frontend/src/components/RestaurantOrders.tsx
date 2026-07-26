@@ -8,7 +8,7 @@ const ACTIVE_STATUS = [
                 "placed",
                 "accepted",
                 "preparing",
-                "ready_for_pickup",
+                "ready_for_rider",
                 "rider_assigned",
                 "delivered",
             ]

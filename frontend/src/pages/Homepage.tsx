@@ -2,6 +2,8 @@ import { useSearchParams } from "react-router-dom";
 import { useAppData } from "../context/AppContext";
 import { useEffect, useState } from "react";
 import * as restaurantService from "../services/restaurantService";
+import { suggestRestaurants } from "../services/aiService";
+import AISuggestion from "../components/AISuggestion";
 import type { IRestaurant } from "../types/types";
 import RestaurantCard from "../components/RestaurantCard";
 import RestaurantCarousel from "../components/RestaurantCarousel";
@@ -152,6 +154,25 @@ const Homepage = () => {
             </div>
           </div>
         </div>
+
+        {restaurants.length > 0 && (
+          <AISuggestion
+            title="Restaurant Recommendations"
+            description="Tell us what you're craving and get personalized suggestions."
+            placeholder="e.g. 'Italian food' or 'something spicy'"
+            buttonText="Recommend"
+            apiCall={(input) =>
+              suggestRestaurants({
+                restaurants: restaurants.map((r) => ({
+                  name: r.name,
+                  cuisine: r.description || "general",
+                })),
+                preferences: input,
+              })
+            }
+            extractResult={(res) => res.data.suggestion}
+          />
+        )}
 
         {userRestaurantLoading ? (
           <div className="rounded-3xl bg-white p-8 shadow-sm text-center text-gray-500">Loading your restaurant...</div>

@@ -10,7 +10,7 @@ const addMenuItem = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
     const user = req.user;
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-    const restaurant = await Restaurant.findOne({ ownerId: String(user._id) });
+    const restaurant = await Restaurant.findOne({ ownerId: String(user._id) }).lean();
     if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
 
     const { name, price, description, category } = req.body;
@@ -47,7 +47,7 @@ const getMenuItems = TryCatch(async (req: AuthenticatedRequest, res: Response) =
     const { restaurantId } = req.query;
     if (!restaurantId) return res.status(400).json({ message: "restaurantId query param is required" });
 
-    const items = await MenuItem.find({ restaurantId: restaurantId as string }).sort({ createdAt: -1 });
+    const items = await MenuItem.find({ restaurantId: restaurantId as string }).sort({ createdAt: -1 }).lean();
 
     res.status(200).json({ menuItems: items });
 });
@@ -93,7 +93,7 @@ const toggleMenuItemAvailability = TryCatch(async (req: AuthenticatedRequest, re
 
     const { id } = req.params;
 
-    const restaurant = await Restaurant.findOne({ ownerId: String(user._id) });
+    const restaurant = await Restaurant.findOne({ ownerId: String(user._id) }).lean();
     if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
 
     const item = await MenuItem.findOne({ _id: id, restaurantId: restaurant._id });
@@ -112,7 +112,7 @@ const deleteMenuItem = TryCatch(async (req: AuthenticatedRequest, res: Response)
 
     const { id } = req.params;
 
-    const restaurant = await Restaurant.findOne({ ownerId: String(user._id) });
+    const restaurant = await Restaurant.findOne({ ownerId: String(user._id) }).lean();
     if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
 
     const deleted = await MenuItem.findOneAndDelete({ _id: id, restaurantId: restaurant._id });
@@ -125,7 +125,7 @@ const getPublicMenuItems = TryCatch(async (req: AuthenticatedRequest, res: Respo
     const { restaurantId } = req.params;
     if (!restaurantId) return res.status(400).json({ message: "restaurantId is required" });
 
-    const items = await MenuItem.find({ restaurantId, isAvailable: true }).sort({ category: 1, name: 1 });
+    const items = await MenuItem.find({ restaurantId, isAvailable: true }).sort({ category: 1, name: 1 }).lean();
 
     res.status(200).json({ menuItems: items });
 });
@@ -133,7 +133,8 @@ const getPublicMenuItems = TryCatch(async (req: AuthenticatedRequest, res: Respo
 const getAllAvailableItems = TryCatch(async (_req: AuthenticatedRequest, res: Response) => {
     const items = await MenuItem.find({ isAvailable: true })
         .populate("restaurantId", "name image address")
-        .sort({ category: 1, name: 1 });
+        .sort({ category: 1, name: 1 })
+        .lean();
 
     res.status(200).json({ menuItems: items });
 });

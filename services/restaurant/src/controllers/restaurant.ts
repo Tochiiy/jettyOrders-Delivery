@@ -21,7 +21,7 @@ const addRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Response) 
 
     const existingRestuarant = await Restaurant.findOne({
         ownerId: String(user._id)
-    });
+    }).lean();
     if (existingRestuarant) {
         return res.status(400).json({ success: false, message: "User already has a restaurant", error: { code: "RESTAURANT_EXISTS", message: "User already has a restaurant" } });
     }
@@ -83,7 +83,7 @@ const fetchMyRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Respon
 
     const restaurant = await Restaurant.findOne({
         ownerId: String(req.user._id)
-    });
+    }).lean();
 
     if (!restaurant) {
         return res.status(404).json({ success: false, message: "No restaurant found", error: { code: "NO_RESTAURANT", message: "No restaurant found" } });
@@ -91,9 +91,17 @@ const fetchMyRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Respon
 
     const authHeader = req.headers.authorization
     const rawToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null
-    const tokenPayload = rawToken ? jwt.decode(rawToken) as any : null
+    let hasRestaurantId = false
+    if (rawToken) {
+        try {
+            const decoded = jwt.verify(rawToken, process.env.JWT_SECRET as string) as jwt.JwtPayload
+            hasRestaurantId = !!decoded.restaurantId
+        } catch {
+            hasRestaurantId = false
+        }
+    }
 
-    if (!tokenPayload?.restaurantId) {
+    if (!hasRestaurantId) {
         const newToken = jwt.sign(
             {
                 userId: req.user._id,
@@ -195,14 +203,14 @@ const getAllRestaurants = TryCatch(async (_req: AuthenticatedRequest, res: Respo
         };
     }
 
-    const restaurants = await Restaurant.find(query).sort({ isOpen: -1, createdAt: -1 });
+    const restaurants = await Restaurant.find(query).sort({ isOpen: -1, createdAt: -1 }).lean();
 
     res.status(200).json({ success: true, message: "Restaurants fetched", count: restaurants.length, restaurants });
 });
 
 const fetchSingleRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
-    const restaurant = await Restaurant.findById(id);
+    const restaurant = await Restaurant.findById(id).lean();
     if (!restaurant) return res.status(404).json({ success: false, message: "Restaurant not found", error: { code: "RESTAURANT_NOT_FOUND", message: "Restaurant not found" } });
     res.status(200).json({ success: true, message: "Restaurant fetched", restaurant });
 })
@@ -211,7 +219,7 @@ const deleteRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Respons
     const user = req.user;
     if (!user) return res.status(401).json({ success: false, message: "Unauthorized", error: { code: "UNAUTHORIZED", message: "Unauthorized" } });
 
-    const restaurant = await Restaurant.findOne({ ownerId: String(user._id) });
+    const restaurant = await Restaurant.findOne({ ownerId: String(user._id) }).lean();
     if (!restaurant) return res.status(404).json({ success: false, message: "Restaurant not found", error: { code: "RESTAURANT_NOT_FOUND", message: "Restaurant not found" } });
 
     await MenuItem.deleteMany({ restaurantId: restaurant._id });

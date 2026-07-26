@@ -26,6 +26,12 @@ const Order = () => {
     const [placeError, setPlaceError] = useState("");
 
     useEffect(() => {
+        if (user?.role === "seller") {
+            navigate("/", { replace: true });
+        }
+    }, [user, navigate]);
+
+    useEffect(() => {
         const fetchAddresses = async () => {
             try {
                 const { data } = await addressService.getAddresses();
@@ -76,7 +82,6 @@ const Order = () => {
     };
 
     if (user?.role === "seller") {
-        navigate("/", { replace: true });
         return null;
     }
 
