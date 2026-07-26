@@ -1,4 +1,5 @@
-import {  Route, Routes, BrowserRouter} from 'react-router-dom'
+import { useEffect } from 'react'
+import { Route, Routes, BrowserRouter, useLocation } from 'react-router-dom'
 import Homepage from './pages/Homepage'
 import Login from './pages/Login'
 import { Toaster } from 'react-hot-toast'
@@ -20,40 +21,50 @@ import MyOrders from './pages/MyOrders'
 import SellerOrders from './pages/SellerOrders'
 import OrderConfirmation from './pages/OrderConfirmation'
 import ResetPassword from './pages/ResetPassword'
+import { trackPageView } from './utils/analytics'
+
+const AnalyticsTracker = () => {
+  const location = useLocation()
+
+  useEffect(() => {
+    trackPageView(location.pathname + location.search)
+  }, [location])
+
+  return null
+}
 
 const App = () => {
   return (
     <BrowserRouter>
       <ErrorBoundary>
-      <Navbar />
-      <Routes>
-        <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Homepage />} />
-          <Route path="/select-role" element={<SelectRole />} />
-          <Route path="/account" element={<Account />} />
-          <Route path="/seller/add" element={<RestaurantDashboard />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/browse" element={<BrowseMenu />} />
-          <Route path="/address" element={<AddressPage />} />
-          <Route path="/order" element={<Order />} />
-          <Route path="/orders" element={<MyOrders />} />
-          <Route path="/seller/orders" element={<SellerOrders />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/order/:orderId" element={<OrderConfirmation />} />
-        </Route>
-        <Route path="/restaurant/:restaurantId" element={<RestaurantMenu />} />
-        <Route element={<PublicRoute />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-        </Route>
-        <Route path="/menu/:restaurantId" element={<PublicMenu />} />
-      </Routes>
-      <Toaster />
+        <AnalyticsTracker />
+        <Navbar />
+        <Routes>
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Homepage />} />
+            <Route path="/select-role" element={<SelectRole />} />
+            <Route path="/account" element={<Account />} />
+            <Route path="/seller/add" element={<RestaurantDashboard />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/browse" element={<BrowseMenu />} />
+            <Route path="/address" element={<AddressPage />} />
+            <Route path="/order" element={<Order />} />
+            <Route path="/orders" element={<MyOrders />} />
+            <Route path="/seller/orders" element={<SellerOrders />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/order/:orderId" element={<OrderConfirmation />} />
+          </Route>
+          <Route path="/restaurant/:restaurantId" element={<RestaurantMenu />} />
+          <Route element={<PublicRoute />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+          </Route>
+          <Route path="/menu/:restaurantId" element={<PublicMenu />} />
+        </Routes>
+        <Toaster />
       </ErrorBoundary>
     </BrowserRouter>
   )
 }
 
 export default App
-
-

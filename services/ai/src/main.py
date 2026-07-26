@@ -10,6 +10,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel, Field
 
+import sentry_sdk
 from agents import suggest_dish_chain, suggest_restaurants_chain, generate_review_chain
 from auth import verify_token
 from config import settings
@@ -18,6 +19,9 @@ required_vars = {"GROQ_API_KEY": settings.groq_api_key, "JWT_SECRET": settings.j
 missing = [k for k, v in required_vars.items() if not v]
 if missing:
     raise SystemExit(f"Missing required env vars: {', '.join(missing)}")
+
+if sentry_dsn := os.getenv("SENTRY_DSN"):
+    sentry_sdk.init(dsn=sentry_dsn)
 
 limiter = Limiter(key_func=get_remote_address)
 

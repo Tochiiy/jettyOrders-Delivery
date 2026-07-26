@@ -7,3 +7,11 @@ export const apiLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many requests, please try again later" },
 });
+
+export const internalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many internal requests" },
+});

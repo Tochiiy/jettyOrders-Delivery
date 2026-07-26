@@ -13,4 +13,5 @@ dependencies = [
     "pydantic-settings>=2",
     "pyjwt>=2",
     "slowapi>=0.1",
+    "sentry-sdk>=2",
 ]

@@ -162,21 +162,22 @@
 | `CartContext.tsx` clearCart unhandled rejection | Swallows error, resets all state to 0 |
 
 ## Next Steps / Where to Continue
-1. ~~**All (38+ fixes)** — Production audit completed, all critical/high/medium bugs resolved (Jul 26, 2026)~~ **(done)**
-2. **Finish core logic & features** (in progress)
-3. **Sales dashboard**: Sellers have `SellerOrders` but no aggregate sales view (placeholder only)
-4. **Tests**: Write tests across all 6 services and frontend
-5. **Frontend deploy**: Vercel
-6. **Dockerize**: All backend services
-7. **Host**: AWS (backend services) + Render
-8. **CI/CD pipeline**: Lint + typecheck + test gate
-9. **Structured logging**: Levels + correlation IDs (pino/winston)
-10. **Error tracking**: Sentry or similar
-11. **HTTPS**: Reverse proxy (nginx/Caddy) or ALB
-12. **Internal rate limiters**: Add `internalLimiter` to auth + utils
-13. **Body size limits**: Tighten per-route (10kb on auth, 10mb on uploads)
-14. **CORS methods**: Restrict to actual HTTP verbs per route
-15. **DB migrations**: Tool like migrate-mongo for schema changes
+1. ~~**All (38+ fixes)** — Production audit completed (Jul 26, 2026)~~ **(done)**
+2. ~~**Structured logging** — Pino + correlation IDs across 5 TS services~~ **(done)**
+3. ~~**Error tracking** — Sentry in all 7 services (backends guarded, frontend with replay)~~ **(done)**
+4. ~~**Internal rate limiters** — Added to auth + utils~~ **(done)**
+5. ~~**Frontend monitoring** — GA4 + Sentry React (ErrorBoundary, replay, browser tracing)~~ **(done)**
+6. **Finish core logic & features** (in progress)
+7. **Sales dashboard**: Sellers have `SellerOrders` but no aggregate sales view (placeholder only)
+8. **Tests**: Write tests across all 6 services and frontend
+9. **Frontend deploy**: Vercel
+10. **Dockerize**: All backend services
+11. **Host**: AWS (backend services) + Render
+12. **CI/CD pipeline**: Lint + typecheck + test gate
+13. **HTTPS**: Reverse proxy (nginx/Caddy) or ALB
+14. **Body size limits**: Tighten per-route (10kb on auth, 10mb on uploads)
+15. **CORS methods**: Restrict to actual HTTP verbs per route
+16. **DB migrations**: Tool like migrate-mongo for schema changes
 
 ## Rider Dashboard Features (added)
 - **Registration**: phone, drivers license, photo upload, location
@@ -224,3 +225,62 @@ RABBITMQ_URL=amqp://...
 REALTIME_SERVICE_URL=http://localhost:5005
 ORDER_EVENT_QUEUE=order_events
 ```
+
+## Pre-Deployment Checklist — Env Vars to Set
+
+> **REMEMBER**: These must all be configured before any service goes live. Missing vars cause silent failure or startup exit.
+
+### All Backend Services (7 total)
+| Var | Where |
+|---|---|
+| `SENTRY_DSN` | All 7 services (auth, restaurant, rider, utils, realtime, AI, frontend). Optional — omitting disables Sentry. |
+
+### Frontend (`.env`)
+| Var | Required | Purpose |
+|---|---|---|
+| `VITE_GA_MEASUREMENT_ID` | No | Google Analytics 4 measurement ID (e.g. `G-XXXXXXXXXX`) |
+| `VITE_SENTRY_DSN` | No | Sentry DSN for frontend error tracking + replay |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Yes | Stripe pk_test_... for checkout |
+| `VITE_API_URL` | Yes | Auth service URL |
+| `VITE_RESTAURANT_API` | Yes | Restaurant service URL |
+| `VITE_UTILS_API` | Yes | Utils/payment service URL |
+| `VITE_AI_API` | Yes | AI service URL |
+| `VITE_REALTIME_API` | Yes | Realtime service URL |
+| `VITE_RIDER_API` | Yes | Rider service URL |
+
+### Auth
+| Var | Required | Purpose |
+|---|---|---|
+| `SENTRY_DSN` | No | Error tracking |
+
+### Restaurant
+| Var | Required | Purpose |
+|---|---|---|
+| `SENTRY_DSN` | No | Error tracking |
+| `PAYMENT_QUEUE` | Yes | RabbitMQ queue name for payments |
+| `ORDER_EVENT_QUEUE` | Yes | RabbitMQ queue name for order events |
+
+### Utils
+| Var | Required | Purpose |
+|---|---|---|
+| `SENTRY_DSN` | No | Error tracking |
+| `STRIPE_SECRET_KEY` | Yes | Stripe sk_... for payment processing |
+| `PAYMENT_QUEUE` | Yes | RabbitMQ payment event queue |
+
+### Rider
+| Var | Required | Purpose |
+|---|---|---|
+| `SENTRY_DSN` | No | Error tracking |
+| `ORDER_EVENT_QUEUE` | Yes | RabbitMQ order event queue |
+
+### Realtime
+| Var | Required | Purpose |
+|---|---|---|
+| `SENTRY_DSN` | No | Error tracking |
+
+### AI
+| Var | Required | Purpose |
+|---|---|---|
+| `SENTRY_DSN` | No | Error tracking |
+| `GROQ_API_KEY` | Yes | Groq LLM access |
+| `JWT_SECRET` | Yes | Token verification |
