@@ -1,6 +1,6 @@
 # AgentMemory.md — JettyOrders-Delivery Project State
 
-## Last Updated: July 26, 2026 — Session: Production audit + naming cleanup — 0 TS errors
+## Last Updated: July 26, 2026 — Session: Structured logging (pino), Sentry, rate limiters, frontend GA4+Sentry — 0 TS errors
 
 ---
 
@@ -281,43 +281,44 @@ All services import from a single `services/api.ts`:
 ### Auth (`services/auth/.env`)
 ```
 PORT=5000, MONGO_URI, JWT_SECRET, JWT_REFRESH_SECRET (optional, falls back to JWT_SECRET),
-GOOGLE_CLIENT_ID/SECRET, SMTP_HOST/PORT/USER/PASS/FROM
+GOOGLE_CLIENT_ID/SECRET, SMTP_HOST/PORT/USER/PASS/FROM, SENTRY_DSN (optional)
 ```
 
 ### Restaurant (`services/restaurant/.env`)
 ```
 PORT=5001, MONGO_URI, JWT_SECRET, INTERNAL_SERVICE_KEY,
-UTILS_SERVICE, RABBITMQ_URL, PAYMENT_QUEUE, REALTIME_SERVICE_URL
+UTILS_SERVICE, RABBITMQ_URL, PAYMENT_QUEUE, REALTIME_SERVICE_URL, SENTRY_DSN (optional)
 ```
 
 ### Utils (`services/utils/.env`)
 ```
 PORT=5002, MONGO_URI, JWT_SECRET, CLOUDINARY_*,
-RABBITMQ_URL, PAYMENT_QUEUE, RESTUARANT_SERVICE,
-STRIPE_SECRET_KEY
+RABBITMQ_URL, PAYMENT_QUEUE, RESTAURANT_SERVICE,
+STRIPE_SECRET_KEY, SENTRY_DSN (optional)
 ```
 
 ### AI (`services/ai/.env`)
 ```
-PORT=5003, GROQ_API_KEY, JWT_SECRET, LANGSMITH_TRACING, LANGSMITH_API_KEY
+PORT=5003, GROQ_API_KEY, JWT_SECRET, LANGSMITH_TRACING, LANGSMITH_API_KEY, SENTRY_DSN (optional)
 ```
 
 ### Rider (`services/rider/.env`)
 ```
 PORT=5004, MONGO_URI, JWT_SECRET, REALTIME_SERVICE_URL,
 INTERNAL_SERVICE_KEY, RESTAURANT_SERVICE, UTILS_SERVICE,
-RABBITMQ_URL, ORDER_EVENT_QUEUE
+RABBITMQ_URL, ORDER_EVENT_QUEUE, SENTRY_DSN (optional)
 ```
 
 ### Realtime (`services/realtime/.env`)
 ```
-PORT=5005, CORS_ORIGIN, JWT_SECRET, INTERNAL_SERVICE_KEY
+PORT=5005, CORS_ORIGIN, JWT_SECRET, INTERNAL_SERVICE_KEY, SENTRY_DSN (optional)
 ```
 
 ### Frontend (`frontend/.env`)
 ```
 VITE_API_URL, VITE_RESTAURANT_API, VITE_UTILS_API,
-VITE_AI_API, VITE_STRIPE_PUBLISHABLE_KEY, VITE_REALTIME_API, VITE_RIDER_API
+VITE_AI_API, VITE_STRIPE_PUBLISHABLE_KEY, VITE_REALTIME_API, VITE_RIDER_API,
+VITE_GA_MEASUREMENT_ID (optional), VITE_SENTRY_DSN (optional)
 ```
 
 ---
@@ -377,7 +378,13 @@ cd frontend && npm run dev
 - ~~[ ] `fetchRestaurantOrders` `limit(0)` returned all docs — default 50, cap 100~~ **(done)**
 - ~~[ ] `services/restaurant/src/routes/internal.ts` → `rider.ts` to match resource naming convention~~ **(done)**
 
-### Remaining (planned — after core logic complete)
+### Completed (this session — Jul 26, 2026)
+- ~~[ ] Structured logging — pino + correlation IDs (pino-http) across 5 TS services~~ **(done)**
+- ~~[ ] Error tracking — Sentry in all 7 services (guarded by SENTRY_DSN env var)~~ **(done)**
+- ~~[ ] internalLimiter on auth + utils internal routes~~ **(done)**
+- ~~[ ] Frontend monitoring — GA4 + @sentry/react (browser tracing, replay, ErrorBoundary)~~ **(done)**
+
+### Remaining (planned)
 - [ ] Finish core features / logic (in progress)
 - [ ] Sales dashboard — aggregate seller view (placeholder)
 - [ ] Tests — all 6 services + frontend
@@ -385,10 +392,7 @@ cd frontend && npm run dev
 - [ ] Dockerize backend services
 - [ ] Host backend → AWS + Render
 - [ ] CI/CD pipeline — lint + typecheck + test gate
-- [ ] Structured logging — pino/winston with correlation IDs
-- [ ] Error tracking — Sentry
 - [ ] HTTPS — reverse proxy or ALB
-- [ ] internalLimiter on auth + utils internal routes
 - [ ] Per-route body size limits (10kb auth, 10mb uploads)
 - [ ] CORS — restrict to actual HTTP verbs per route
 - [ ] DB migrations — migrate-mongo or similar
@@ -408,14 +412,16 @@ JettyOrders-Delivery/
 │   │   ├── controllers/auth.ts
 │   │   ├── middlewares/rateLimiter.ts
 │   │   ├── models/User.ts
-│   │   └── routes/auth.ts
+│   │   ├── routes/auth.ts
+│   │   ├── utils/logger.ts
 │   ├── restaurant/src/
 │   │   ├── config/rabbitmq.ts, db.ts, datauri.ts
 │   │   ├── controllers/restaurant.ts, menuitem.ts, cart.ts, address.ts, order.ts
 │   │   ├── events/paymentConsumer.ts, order.publisher.ts
 │   │   ├── middlewares/isAuth.ts, multer.ts, tryCatch.ts, rateLimiter.ts
 │   │   ├── models/Restaurant.ts, MenuItem.ts, CartModel.ts, Address.ts, Order.ts
-│   │   ├── routes/restaurant.ts, menuitem.ts, cart.ts, address.ts, order.ts
+│   │   ├── routes/restaurant.ts, menuitem.ts, cart.ts, address.ts, order.ts, rider.ts
+│   │   ├── utils/logger.ts
 │   │   └── index.ts
 │   ├── rider/
 │   │   ├── .env, tsconfig.json, package.json
@@ -426,22 +432,25 @@ JettyOrders-Delivery/
 │   │       ├── middlewares/isAuth.ts, multer.ts, tryCatch.ts, internalAuth.ts, rateLimiter.ts
 │   │       ├── models/Rider.ts
 │   │       ├── routes/rider.ts
+│   │       ├── utils/logger.ts
 │   │       └── index.ts
 │   ├── realtime/
 │   │   ├── .env, tsconfig.json, package.json
 │   │   └── src/
-│   │       ├── index.ts, sockets.ts, internal.ts
+│   │       ├── index.ts, sockets.ts, internal.ts, utils/logger.ts
 │   └── utils/src/
 │       ├── config/rabbitmq.ts, stripepay.ts
 │       ├── controllers/payment.ts
 │       ├── events/paymentProducer.ts
 │       ├── routes/payment.ts, cloudinary.ts
+│       ├── utils/logger.ts
 │       └── index.ts
 └── frontend/src/
     ├── components/ (Navbar, Account, AddResturant, RestuarantProfile, AddMenuItem, MenuItems, RestuarantOrder, AISuggestion, ProtectedRoute, PublicRoute)
     ├── pages/ (Homepage, Login, SelectRole, Restuarant, RestuarantPage, PublicMenu, BrowseMenu, Cart, Address, Order, Checkout, OrderConfirmation, ResetPassword, RiderDashboard, RestaurantMenu, MyOrders)
     ├── services/ (api.ts, authService, restaurantService, menuService, cartService, addressService, orderService, paymentService, aiService, realtimeService, riderService)
     ├── context/ (AppContext, CartContext, SocketContext)
+    ├── utils/analytics.ts
     ├── assets/notification-951.wav
     ├── assets/software-interface-257.wav
     ├── types/types.ts
