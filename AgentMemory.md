@@ -1,6 +1,6 @@
 # AgentMemory.md — JettyOrders-Delivery Project State
 
-## Last Updated: July 26, 2026 — Session: Production audit — 38+ bugs fixed across 7 services
+## Last Updated: July 26, 2026 — Session: Production audit + naming cleanup — 0 TS errors
 
 ---
 
@@ -375,6 +375,7 @@ cd frontend && npm run dev
 - ~~[ ] `Account.tsx` called nonexistent `logout()` instead of `logoutUser()` — fixed~~ **(done)**
 - ~~[ ] `trust proxy` missing on rate-limited services — added to all 5 services~~ **(done)**
 - ~~[ ] `fetchRestaurantOrders` `limit(0)` returned all docs — default 50, cap 100~~ **(done)**
+- ~~[ ] `services/restaurant/src/routes/internal.ts` → `rider.ts` to match resource naming convention~~ **(done)**
 
 ### Remaining (planned — after core logic complete)
 - [ ] Finish core features / logic (in progress)
