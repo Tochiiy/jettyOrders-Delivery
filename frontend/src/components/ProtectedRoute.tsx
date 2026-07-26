@@ -15,6 +15,7 @@ const ProtectedRoute = () => {
     }
 
     if (user?.role === "rider") {
+        if (location.pathname === "/account") return <Outlet />;
         return <RiderDashboard />;
     }
 

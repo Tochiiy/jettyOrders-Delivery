@@ -1,6 +1,6 @@
 # AgentMemory.md — JettyOrders-Delivery Project State
 
-## Last Updated: July 26, 2026 — Session: Refresh token rotation, distance fix, docs sync
+## Last Updated: July 26, 2026 — Session: Production audit — 38+ bugs fixed across 7 services
 
 ---
 
@@ -349,18 +349,32 @@ cd frontend && npm run dev
 ---
 
 ## Known Issues / TODOs
-### Fixed (this session)
-- ~~[ ] Refresh token rotation — added `refreshToken` field to User model, `POST /auth/refresh` and `POST /auth/logout` endpoints, token rotation with hashed storage, auto-refresh on 401 in AppContext~~ **(done)**
-- ~~[ ] Distance hardcoded as `1` — was already correctly calculated via Haversine formula in order.ts (AgentMemory was stale)~~ **(already fixed)**
-- ~~[ ] `ready_for_pickup` status ambiguity — removed from model, types, all pages, unified to `ready_for_rider`~~ **(done)**
-- ~~[ ] `ORDER_READY_FOR_PICKUP` event name mismatch with status — renamed to `ORDER_READY_FOR_RIDER`~~ **(done)**
-- ~~[ ] AI service no JWT auth — added `verify_token` middleware via `auth.py`~~ **(done)**
-- ~~[ ] AI service no rate limiting — added `slowapi` 10/min per endpoint~~ **(done)**
-- ~~[ ] AI service no startup env validation — fails early if `GROQ_API_KEY`/`JWT_SECRET` missing~~ **(done)**
-- ~~[ ] Frontend AI integration missing — built `AISuggestion` component, mounted in 3 pages~~ **(done)**
-- ~~[ ] Sound files swapped/confused — `notification-951.wav` → restaurant, `software-interface-257.wav` → rider~~ **(done)**
-- ~~[ ] `RESTUARANT_SERVICE` typo in `utils/src/events/paymentHeader.ts`~~ **(done)**
-- ~~[ ] Env var validation only covered 5 services — added AI service, now all 6~~ **(done)**
+### Fixed (this session — Production Audit Jul 26, 2026)
+- ~~[ ] Password hash leaked in 5 auth response paths — added `.select("-password")` + safeUser spread~~ **(done)**
+- ~~[ ] Any user could confirm anyone's payment — added JWT auth + amount mismatch check to confirmPayment~~ **(done)**
+- ~~[ ] Payment always "succeeded" — added amount comparison against DB order total~~ **(done)**
+- ~~[ ] Cart race condition — atomic `findOneAndUpdate` with `restaurantId` check~~ **(done)**
+- ~~[ ] Refresh token rotation race — atomic `findOneAndUpdate` instead of find+save~~ **(done)**
+- ~~[ ] Missing `ORDER_EVENT_QUEUE`/`STRIPE_SECRET_KEY`/`PAYMENT_QUEUE` from REQUIRED_ENV — added in rider/utils~~ **(done)**
+- ~~[ ] Consumers started before RabbitMQ ready — `.then()` chains in restaurant/rider~~ **(done)**
+- ~~[ ] `assignRiderToOrder` no status validation — added `status === "ready_for_rider"` check~~ **(done)**
+- ~~[ ] `updateStatusRider` hardcoded zero coords — fetches restaurant location from DB~~ **(done)**
+- ~~[ ] RabbitMQ nack `false` discards messages — changed to `true` (requeue)~~ **(done)**
+- ~~[ ] Rider coords stored as strings — `Number()` conversion in all location handlers~~ **(done)**
+- ~~[ ] Rider `driversLicenseNumber` leaked in all responses — stripped from all 5 response paths~~ **(done)**
+- ~~[ ] `acceptOrder` missing `orderId` validation — added guard~~ **(done)**
+- ~~[ ] Socket.IO CORS missing 127.0.0.1 — aligned with HTTP CORS~~ **(done)**
+- ~~[ ] `location:update` no input validation — added `typeof` checks + non-silent error logging~~ **(done)**
+- ~~[ ] AI service CORS missing 127.0.0.1 + no input size limits — added truncation/injection guardrails~~ **(done)**
+- ~~[ ] Frontend `bg-grey-50` → `bg-gray-50` — Tailwind v4 class rename~~ **(done)**
+- ~~[ ] `ProtectedRoute.tsx` blocked riders from `/account` — added exception~~ **(done)**
+- ~~[ ] `Homepage.tsx` infinite re-fetch from `location` object dep — use lat/lng primitives~~ **(done)**
+- ~~[ ] `MenuItems.tsx` missing `restaurantId` dep — added~~ **(done)**
+- ~~[ ] `CartContext.tsx` clearCart unhandled rejection — graceful state reset~~ **(done)**
+- ~~[ ] `Checkout.tsx` called `onSuccess()` even when confirmPayment failed — moved inside try block~~ **(done)**
+- ~~[ ] `Account.tsx` called nonexistent `logout()` instead of `logoutUser()` — fixed~~ **(done)**
+- ~~[ ] `trust proxy` missing on rate-limited services — added to all 5 services~~ **(done)**
+- ~~[ ] `fetchRestaurantOrders` `limit(0)` returned all docs — default 50, cap 100~~ **(done)**
 
 ### Remaining
 - [ ] No tests

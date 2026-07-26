@@ -105,7 +105,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             setCartTotal(data.cartTotal || 0);
         } catch (error) {
             console.error("Error clearing cart:", error);
-            throw error;
+            setCartItems([]);
+            setCartTotal(0);
+            setSubtotal(0);
+            setPlatformFee(0);
+            setDeliveryFee(0);
         } finally {
             setLoading(false);
         }

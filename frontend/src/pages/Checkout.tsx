@@ -45,11 +45,11 @@ const CheckoutForm = ({ orderId, paymentIntentId, amount, onSuccess }:
 
         try {
             await paymentService.confirmPayment({ paymentIntentId, orderId });
+            onSuccess();
         } catch (err) {
+            setError("Payment failed. Please try again.");
             console.error("Confirm payment error:", err);
         }
-
-        onSuccess();
     };
 
     return (

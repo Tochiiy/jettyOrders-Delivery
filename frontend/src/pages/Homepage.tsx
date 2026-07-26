@@ -62,7 +62,7 @@ const Homepage = () => {
     };
 
     fetchRestaurants();
-  }, [location, search, viewMode, verifiedOnly]);
+  }, [location?.latitude, location?.longitude, search, viewMode, verifiedOnly]);
 
   useEffect(() => {
     const fetchUserRestaurant = async () => {

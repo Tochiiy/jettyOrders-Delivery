@@ -13,7 +13,7 @@ interface DecodedUser {
 const initSocketServer = (server: http.Server) => {
   io = new Server(server, {
     cors: {
-      origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+      origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
     },
   })
 
@@ -73,6 +73,8 @@ const initSocketServer = (server: http.Server) => {
     })
 
     socket.on("location:update", (data: { restaurantId?: string; lat: number; lng: number }) => {
+      if (typeof data.lat !== "number" || typeof data.lng !== "number") return
+
       if (data.restaurantId) {
         io.to(`restaurant-${data.restaurantId}`).emit("rider:location", {
           riderId: userId,
@@ -89,7 +91,9 @@ const initSocketServer = (server: http.Server) => {
           longitude: data.lng,
         }, {
           headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY },
-        }).catch(() => {})
+        }).catch((err) => {
+          console.error("Failed to persist rider location:", err?.message || err)
+        })
       }
     })
   })

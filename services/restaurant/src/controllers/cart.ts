@@ -60,21 +60,10 @@ const addCartItem = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
     }
 
 
-    const existingCart = await Cart.findOne({ userId: user._id }).lean();
-    if (existingCart && existingCart.items.length > 0) {
-        const existingRestaurantId = existingCart.items[0].restaurantId?.toString();
-        if (existingRestaurantId && existingRestaurantId !== menuItem.restaurantId.toString()) {
-            return res.status(400).json({
-                message: "Your cart already contains items from a different restaurant. Please clear your cart before adding items from another restaurant.",
-            });
-        }
-    }
-
     const restaurant = await Restaurant.findById(menuItem.restaurantId).lean();
 
-    
     cart = await Cart.findOneAndUpdate(
-        { userId: user._id },
+        { userId: user._id, $or: [{ items: { $eq: [] } }, { "items.restaurantId": menuItem.restaurantId.toString() }] },
         {
             $push: {
                 items: {
@@ -92,7 +81,13 @@ const addCartItem = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
         { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
     );
 
-    const subtotal = calculateCartTotal(cart!.items);
+    if (!cart) {
+        return res.status(400).json({
+            message: "Your cart already contains items from a different restaurant. Please clear your cart before adding items from another restaurant.",
+        });
+    }
+
+    const subtotal = calculateCartTotal(cart.items);
     const { platformFee, deliveryFee, grandTotal } = calculateFees(subtotal);
     res.status(200).json({ message: "Item added to cart", cart, subtotal, platformFee, deliveryFee, cartTotal: grandTotal });
 });

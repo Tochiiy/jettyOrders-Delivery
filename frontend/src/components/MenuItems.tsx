@@ -106,7 +106,7 @@ const MenuItems = ({ restaurantId }: props) => {
 
     useEffect(() => {
         fetchItems();
-    }, []);
+    }, [restaurantId]);
 
     if (loading) {
         return (

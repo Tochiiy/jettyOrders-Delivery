@@ -29,9 +29,7 @@ const statusFlow: Record<string, string[]> = {
     placed: ["accepted", "cancelled"],
     accepted: ["preparing", "cancelled"],
     preparing: ["ready_for_rider", "cancelled"],
-    ready_for_rider: ["rider_assigned"],
-    rider_assigned: ["pickedUp"],
-    pickedUp: ["delivered"],
+    ready_for_rider: [],
 };
 
 const statusLabel: Record<string, string> = {

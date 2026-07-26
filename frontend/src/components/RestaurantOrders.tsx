@@ -10,7 +10,6 @@ const ACTIVE_STATUS = [
                 "preparing",
                 "ready_for_rider",
                 "rider_assigned",
-                "delivered",
             ]
 const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
   const [orders, setOrders] = useState<IOrder[]>([]);
@@ -77,7 +76,7 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
     fetchOrders()
   }, [restaurantId])
 
-  if (loading) return <p className="text-grey-500">Loading...</p>
+  if (loading) return <p className="text-gray-500">Loading...</p>
   
   const activeOrders = orders.filter((order) => ACTIVE_STATUS.includes(order.status))
   const completedOrders = orders.filter((order) => !ACTIVE_STATUS.includes(order.status))
@@ -101,7 +100,7 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
 
     <div className="space-y-3">
       <h3 className="text-lg font-semibold">Active Orders</h3>
-      {activeOrders.length === 0 ? <p className="text-sm text-grey-500">No Active Orders</p> :
+      {activeOrders.length === 0 ? <p className="text-sm text-gray-500">No Active Orders</p> :
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {
             activeOrders.map((order) => (
@@ -114,7 +113,7 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
 
     <div className="space-y-3">
       <h3 className="text-lg font-semibold">Completed Orders</h3>
-      {completedOrders.length === 0 ? <p className="text-sm text-grey-500">No Completed Orders</p> :
+      {completedOrders.length === 0 ? <p className="text-sm text-gray-500">No Completed Orders</p> :
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {
             completedOrders.map((order) => (

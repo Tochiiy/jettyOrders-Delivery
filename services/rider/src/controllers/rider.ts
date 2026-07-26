@@ -19,7 +19,7 @@ const registerRider = TryCatch(async (req: AuthenticatedRequest, res: Response) 
 
  
     const { phone, driversLicenseNumber, latitude, longitude } = req.body;
-    if (!phone || !driversLicenseNumber || latitude === undefined || longitude === undefined) {
+    if (!phone || !driversLicenseNumber || latitude == null || longitude == null) {
         res.status(400).json({ message: "All fields are required" });
         return;
     }
@@ -53,13 +53,24 @@ const registerRider = TryCatch(async (req: AuthenticatedRequest, res: Response) 
         image: uploadResult.url,
         currentLocation: {
             type: "Point",
-            coordinates: [longitude, latitude],
+            coordinates: [Number(longitude), Number(latitude)],
         },
         isAvailable: false,
         isVerified: false,
     });
 
-    res.status(201).json({ message: "Rider profile created", rider });
+    res.status(201).json({
+        message: "Rider profile created",
+        rider: {
+            _id: rider._id,
+            userId: rider.userId,
+            phone: rider.phone,
+            image: rider.image,
+            isAvailable: rider.isAvailable,
+            isVerified: rider.isVerified,
+            currentLocation: rider.currentLocation,
+        },
+    });
 });
 
 const getMyProfile = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
@@ -75,7 +86,20 @@ const getMyProfile = TryCatch(async (req: AuthenticatedRequest, res: Response) =
         return;
     }
 
-    res.json({ rider });
+    res.json({
+        rider: {
+            _id: rider._id,
+            userId: rider.userId,
+            phone: rider.phone,
+            image: rider.image,
+            isAvailable: rider.isAvailable,
+            isVerified: rider.isVerified,
+            totalDeliveries: rider.totalDeliveries,
+            lastActiveAt: rider.lastActiveAt,
+            currentLocation: rider.currentLocation,
+            createdAt: rider.createdAt,
+        },
+    });
 });
 
 const updateLocation = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
@@ -86,7 +110,7 @@ const updateLocation = TryCatch(async (req: AuthenticatedRequest, res: Response)
     }
 
     const { latitude, longitude } = req.body;
-    if (!latitude || !longitude) {
+    if (latitude == null || longitude == null) {
         res.status(400).json({ message: "Latitude and longitude are required" });
         return;
     }
@@ -96,7 +120,7 @@ const updateLocation = TryCatch(async (req: AuthenticatedRequest, res: Response)
         {
             currentLocation: {
                 type: "Point",
-                coordinates: [longitude, latitude],
+                coordinates: [Number(longitude), Number(latitude)],
             },
         },
         { returnDocument: "after" }
@@ -107,7 +131,9 @@ const updateLocation = TryCatch(async (req: AuthenticatedRequest, res: Response)
         return;
     }
 
-    res.json({ message: "Location updated", rider });
+    // don't leak sensitive fields
+    const { driversLicenseNumber, ...safe } = rider;
+    res.json({ message: "Location updated", rider: safe });
 });
 
 const toggleAvailability = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
@@ -118,7 +144,7 @@ const toggleAvailability = TryCatch(async (req: AuthenticatedRequest, res: Respo
     }
 
     const { isAvailable, latitude, longitude } = req.body;
-    if (isAvailable === undefined || latitude === undefined || longitude === undefined) {
+    if (isAvailable === undefined || latitude == null || longitude == null) {
         res.status(400).json({ message: "All fields are required" });
         return;
     }
@@ -141,11 +167,12 @@ const toggleAvailability = TryCatch(async (req: AuthenticatedRequest, res: Respo
     rider.isAvailable = isAvailable;
     rider.currentLocation = {
         type: "Point",
-        coordinates: [longitude, latitude],
+        coordinates: [Number(longitude), Number(latitude)],
     };
     await rider.save();
 
-    res.json({ message: rider.isAvailable ? "You are now online" : "You are now offline", rider });
+    const { driversLicenseNumber, ...safe } = rider.toObject ? rider.toObject() : rider;
+    res.json({ message: rider.isAvailable ? "You are now online" : "You are now offline", rider: safe });
 });
 
 const acceptOrder = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
@@ -153,12 +180,17 @@ const acceptOrder = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
     const { orderId } = req.params;
+    if (!orderId) return res.status(400).json({ message: "Order ID is required" });
 
-    const rider = await Rider.findOne({ userId: String(user._id), isAvailable: true }).lean();
+    const rider = await Rider.findOneAndUpdate(
+        { userId: String(user._id), isAvailable: true, isVerified: true },
+        { $set: { isAvailable: false } },
+        { returnDocument: "after" }
+    );
     if (!rider) return res.status(404).json({ message: "Rider not found or not available" });
 
     try {
-        const { data } = await axios.put(`${process.env.RESTAURANT_SERVICE}/api/order/assign-rider`, {
+        const { data } = await axios.put(`${process.env.RESTAURANT_SERVICE}/api/order/internal/assign-rider`, {
             orderId,
             riderId: String(user._id),
             riderName: user.name,
@@ -168,15 +200,12 @@ const acceptOrder = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
             headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY },
         });
 
-        if (!data.success) {
-            return res.status(400).json({ message: data.message || "Failed to accept order" });
-        }
-
-        rider.isAvailable = false;
-        await rider.save();
-
         res.status(200).json({ message: "Order accepted", order: data.order });
     } catch (err: any) {
+        await Rider.findOneAndUpdate(
+            { userId: String(user._id) },
+            { $set: { isAvailable: true } }
+        );
         const message = err?.response?.data?.message || "Failed to accept order";
         res.status(400).json({ message });
     }
@@ -187,7 +216,7 @@ const getActiveOrders = TryCatch(async (req: AuthenticatedRequest, res: Response
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
     try {
-        const { data } = await axios.post(`${process.env.RESTAURANT_SERVICE}/api/order/current/rider`, {
+        const { data } = await axios.post(`${process.env.RESTAURANT_SERVICE}/api/order/internal/current/rider`, {
             riderId: String(user._id),
         }, {
             headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY },
@@ -208,7 +237,7 @@ const updateOrderStatus = TryCatch(async (req: AuthenticatedRequest, res: Respon
     if (!orderId || !status) return res.status(400).json({ message: "Order ID and status are required" });
 
     try {
-        const { data } = await axios.put(`${process.env.RESTAURANT_SERVICE}/api/order/rider/status`, {
+        const { data } = await axios.put(`${process.env.RESTAURANT_SERVICE}/api/order/internal/rider/status`, {
             orderId,
             status,
         }, {
@@ -245,7 +274,8 @@ const internalUpdateLocation = TryCatch(async (req: Request, res: Response) => {
     return;
   }
 
-  res.json({ message: "Location updated", rider });
+  const { driversLicenseNumber, ...safe } = rider;
+  res.json({ message: "Location updated", rider: safe });
 });
 
 export { registerRider, getMyProfile, updateLocation, toggleAvailability, acceptOrder, getActiveOrders, updateOrderStatus, internalUpdateLocation };

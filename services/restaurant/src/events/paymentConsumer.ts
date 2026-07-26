@@ -35,7 +35,7 @@ const startPaymentConsumer = async () => {
                 console.log("Payment Success - order placed:", orderId);
 
                 // Fetch restaurant for location
-                const restaurant = await Restaurant.findById(order.restaurantId);
+                const restaurant = await Restaurant.findById(order.restaurantId).lean();
                 const restaurantLocation = restaurant?.autoLocation?.coordinates
                     ? { longitude: restaurant.autoLocation.coordinates[0], latitude: restaurant.autoLocation.coordinates[1] }
                     : { longitude: 0, latitude: 0 };
@@ -71,7 +71,7 @@ const startPaymentConsumer = async () => {
             channel.ack(msg);
         } catch (err) {
             console.error("Payment consumer error:", err);
-            channel.nack(msg, false, false);
+            channel.nack(msg, false, true);
         }
     });
 

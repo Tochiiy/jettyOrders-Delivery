@@ -27,7 +27,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -57,35 +57,49 @@ class GenerateReviewRequest(BaseModel):
 @app.post("/api/ai/suggest-dish")
 @limiter.limit("10/minute")
 async def suggest_dish(request: Request, req: SuggestDishRequest, _user=Depends(verify_token)):
+    if len(req.menu_items) > 200:
+        return {"suggestion": "Too many menu items provided."}
+    menu_str = ", ".join(req.menu_items[:50])
+    user_context = (req.user_context or "")[:500]
     result = await suggest_dish_chain.ainvoke({
-        "restaurant_name": req.restaurant_name,
-        "menu_items": ", ".join(req.menu_items),
-        "user_context": req.user_context or "No specific preference",
+        "restaurant_name": req.restaurant_name[:200],
+        "menu_items": menu_str,
+        "user_context": user_context or "No specific preference",
     })
+    if len(result) > 3000:
+        result = result[:3000]
     return {"suggestion": result}
 
 
 @app.post("/api/ai/suggest-restaurants")
 @limiter.limit("10/minute")
 async def suggest_restaurants(request: Request, req: SuggestRestaurantsRequest, _user=Depends(verify_token)):
+    restaurants = req.restaurants[:100]
+    preferences = (req.preferences or "")[:500]
     restaurants_str = "\n".join(
-        f"- {r.get('name')} ({r.get('cuisine', 'general')})" for r in req.restaurants
+        f"- {str(r.get('name', ''))[:100]} ({str(r.get('cuisine', 'general'))[:50]})" for r in restaurants
     )
     result = await suggest_restaurants_chain.ainvoke({
         "restaurants": restaurants_str,
-        "preferences": req.preferences or "No specific preference",
+        "preferences": preferences or "No specific preference",
     })
+    if len(result) > 3000:
+        result = result[:3000]
     return {"suggestion": result}
 
 
 @app.post("/api/ai/generate-review")
 @limiter.limit("10/minute")
 async def generate_review(request: Request, req: GenerateReviewRequest, _user=Depends(verify_token)):
+    items = ", ".join(req.items[:20])
+    feedback = (req.feedback or "")[:500]
     result = await generate_review_chain.ainvoke({
-        "restaurant_name": req.restaurant_name,
-        "items": ", ".join(req.items),
-        "feedback": req.feedback or "No additional feedback",
+        "restaurant_name": req.restaurant_name[:200],
+        "items": items,
+        "feedback": feedback or "No additional feedback",
     })
+    if len(result) > 2000:
+        result = result[:2000]
     return {"review": result}
 
 

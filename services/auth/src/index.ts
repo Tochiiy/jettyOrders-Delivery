@@ -7,7 +7,7 @@ import { apiLimiter } from "./middlewares/rateLimiter.js";
 
 dotenv.config();
 
-const REQUIRED_ENV = ["JWT_SECRET", "MONGO_URI"];
+const REQUIRED_ENV = ["JWT_SECRET", "MONGO_URI", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"];
 for (const key of REQUIRED_ENV) {
     if (!process.env[key]) {
         console.error(`Missing required env var: ${key}`);
@@ -19,11 +19,13 @@ const app = express();
 
 const PORT = process.env.PORT || 5000;
 
+app.set("trust proxy", 1);
+
 app.use(cors({
     origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
     credentials: true,
 }));
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "10kb" }));
 
 app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok" });

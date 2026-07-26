@@ -9,7 +9,7 @@ import { apiLimiter, internalLimiter } from "./middlewares/rateLimiter.js"
 
 dotenv.config()
 
-const REQUIRED_ENV = ["JWT_SECRET", "MONGO_URI", "INTERNAL_SERVICE_KEY", "RESTAURANT_SERVICE", "UTILS_SERVICE", "RABBITMQ_URL", "REALTIME_SERVICE_URL"]
+const REQUIRED_ENV = ["JWT_SECRET", "MONGO_URI", "INTERNAL_SERVICE_KEY", "RESTAURANT_SERVICE", "UTILS_SERVICE", "RABBITMQ_URL", "REALTIME_SERVICE_URL", "ORDER_EVENT_QUEUE"]
 for (const key of REQUIRED_ENV) {
     if (!process.env[key]) {
         console.error(`Missing required env var: ${key}`)
@@ -19,6 +19,8 @@ for (const key of REQUIRED_ENV) {
 
 const app = express()
 const PORT = process.env.PORT || 5004
+
+app.set("trust proxy", 1)
 
 app.use(cors({
     origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -45,11 +47,12 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 })
 
 connectDB().then(() => {
-  connectRabbitMQ().catch((err) =>
+  connectRabbitMQ().then(() => {
+    startOrderConsumer().catch((err) =>
+      console.error("Order consumer failed:", err)
+    )
+  }).catch((err) =>
     console.error("RabbitMQ connection failed:", err)
-  )
-  startOrderConsumer().catch((err) =>
-    console.error("Order consumer failed:", err)
   )
   app.listen(PORT, () => {
     console.log(`Rider service running on port ${PORT}`)

@@ -1,13 +1,12 @@
 import { Response } from "express";
 import axios from "axios";
+import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import TryCatch from "../middlewares/tryCatch.js";
 import { AuthenticatedRequest } from "../middlewares/isAuth.js";
 import oauth2Client from "../config/googleConfig.js";
 import crypto from "crypto";
-
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!;
 
 const generateAccessToken = (userId: string, restaurantId?: string) =>
     jwt.sign({ userId, restaurantId }, process.env.JWT_SECRET!, { expiresIn: "7d" });
@@ -38,7 +37,7 @@ const loginUser = TryCatch(async (req, res) => {
 
         const { email: gEmail, name, picture } = userResponse.data;
 
-        let user = await User.findOne({ email: gEmail });
+        let user = await User.findOne({ email: gEmail }).select("-password");
 
         if (!user) {
             user = await User.create({
@@ -50,29 +49,31 @@ const loginUser = TryCatch(async (req, res) => {
 
         const { accessToken, refreshToken } = await issueTokens(user);
 
+        const safeUser = { ...user.toObject(), password: undefined, refreshToken: undefined };
+
         res.status(200).json({
             message: "login user successfully",
             token: accessToken,
             refreshToken,
-            user,
+            user: safeUser,
         });
         return;
     }
 
     // Email/password login
     if (email && password) {
-        const user = await User.findOne({ email }).lean();
+        const user = await User.findOne({ email });
         if (!user || !user.password) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
 
-        const bcrypt = (await import('bcryptjs')).default;
         const match = await bcrypt.compare(password, user.password);
         if (!match) return res.status(401).json({ message: "Invalid credentials" });
 
         const { accessToken, refreshToken } = await issueTokens(user);
 
-        res.status(200).json({ message: "login user successfully", token: accessToken, refreshToken, user });
+        const safeUser = { ...user.toObject(), password: undefined, refreshToken: undefined };
+        res.status(200).json({ message: "login user successfully", token: accessToken, refreshToken, user: safeUser });
         return;
     }
 
@@ -99,14 +100,16 @@ if(!req.user?._id) {
         req.user._id,
         { role },
         { returnDocument: "after" }
-    );
+    ).select("-password");
     if (!user) {
         return res.status(404).json({ message: "User not found" });
     }
 
+    const safeUser = { ...user.toObject(), refreshToken: undefined };
+
     const { accessToken, refreshToken } = await issueTokens(user);
 
-    res.status(200).json({ message: "Role added successfully", token: accessToken, refreshToken, user });
+    res.status(200).json({ message: "Role added successfully", token: accessToken, refreshToken, user: safeUser });
 });
 
 
@@ -126,15 +129,19 @@ const registerUser = TryCatch(async (req, res) => {
         return res.status(400).json({ message: "Name, email and password are required" });
     }
 
+    if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
     const existing = await User.findOne({ email }).lean();
     if (existing) return res.status(400).json({ message: "User already exists" });
 
-    const bcrypt = (await import('bcryptjs')).default;
     const hash = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, password: hash, image: "" });
 
     const { accessToken, refreshToken } = await issueTokens(user);
-    res.status(201).json({ message: "User registered", token: accessToken, refreshToken, user });
+    const safeUser = { ...user.toObject(), password: undefined, refreshToken: undefined };
+    res.status(201).json({ message: "User registered", token: accessToken, refreshToken, user: safeUser });
 });
 
 const forgotPassword = TryCatch(async (req, res) => {
@@ -147,12 +154,11 @@ const forgotPassword = TryCatch(async (req, res) => {
     const token = crypto.randomBytes(20).toString("hex");
     const expiry = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
 
-    user.resetToken = token;
-    user.resetTokenExpiry = expiry;
-    await user.save();
-
     // Send email if SMTP configured
     if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+        user.resetToken = token;
+        user.resetTokenExpiry = expiry;
+        await user.save();
         const nodemailer = (await import('nodemailer')).default;
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
@@ -216,13 +222,13 @@ const forgotPassword = TryCatch(async (req, res) => {
 const resetPassword = TryCatch(async (req, res) => {
     const { email, token, newPassword } = req.body;
     if (!email || !token || !newPassword) return res.status(400).json({ message: "Missing fields" });
+    if (newPassword.length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
 
     const user = await User.findOne({ email, resetToken: token });
     if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
         return res.status(400).json({ message: "Invalid or expired token" });
     }
 
-    const bcrypt = (await import('bcryptjs')).default;
     user.password = await bcrypt.hash(newPassword, 10);
     user.resetToken = null;
     user.resetTokenExpiry = null;
@@ -238,16 +244,24 @@ const refreshUserToken = TryCatch(async (req, res) => {
     if (!refreshToken) return res.status(400).json({ message: "Refresh token required" });
 
     const hashed = hashToken(refreshToken);
-    const user = await User.findOne({ refreshToken: hashed });
+    const newHashed = hashToken(generateRefreshToken());
+
+    const user = await User.findOneAndUpdate(
+        { refreshToken: hashed },
+        { $set: { refreshToken: newHashed } },
+        { returnDocument: "after" }
+    );
     if (!user) return res.status(401).json({ message: "Invalid refresh token" });
 
-    const { accessToken, refreshToken: newRefreshToken } = await issueTokens(user);
+    const accessToken = generateAccessToken(user._id.toString(), user.restaurantId ?? undefined);
+
+    const safeUser = { ...user.toObject(), password: undefined, refreshToken: undefined };
 
     res.status(200).json({
         message: "Token refreshed",
         token: accessToken,
-        refreshToken: newRefreshToken,
-        user,
+        refreshToken,
+        user: safeUser,
     });
 });
 

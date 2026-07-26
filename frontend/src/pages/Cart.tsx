@@ -33,10 +33,10 @@ const Cart = () => {
 
     const hasItems = cartItems.length > 0;
 
-    const checkRestaurantStatus = async () => {
-        if (!hasItems) return;
+    const checkRestaurantStatus = async (): Promise<boolean> => {
+        if (!hasItems) return false;
         const restaurantId = cartItems[0].restaurantId;
-        if (!restaurantId) return;
+        if (!restaurantId) return false;
         
         setCheckingStatus(true);
         try {
@@ -44,18 +44,20 @@ const Cart = () => {
             const { data } = await restaurantService.getRestaurantById(restaurantId, token);
             if (data.restaurant && data.restaurant.isOpen === false) {
                 setRestaurantClosed(true);
+                return true;
             }
         } catch (err) {
             console.error("Failed to check restaurant status:", err);
         } finally {
             setCheckingStatus(false);
         }
+        return false;
     };
 
     const handleCheckout = async () => {
         if (restaurantClosed) return;
-        await checkRestaurantStatus();
-        if (restaurantClosed) return;
+        const isClosed = await checkRestaurantStatus();
+        if (isClosed) return;
         navigate("/order");
     };
 

@@ -76,11 +76,17 @@ const createOrder = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
         });
     }
 
+    const restCoords = restaurant.autoLocation?.coordinates;
+    const addrCoords = address.location?.coordinates;
+    if (!restCoords || restCoords.length < 2 || !addrCoords || addrCoords.length < 2) {
+        return res.status(400).json({ message: "Invalid restaurant or address coordinates" });
+    }
+
     const distance = haversineDistance(
-        restaurant.autoLocation.coordinates as [number, number],
-        address.location.coordinates as [number, number]
+        restCoords as [number, number],
+        addrCoords as [number, number]
     );
-    const riderAmount = Math.ceil(Math.max(distance, 1) * 17);
+    const riderAmount = Number.isFinite(distance) ? Math.ceil(Math.max(distance, 1) * 17) : 17;
 
     const platformFee = Math.round(subtotal * PLATFORM_FEE_PERCENT * 100) / 100;
     const deliveryFee = subtotal > 0 ? DELIVERY_FEE : 0;
@@ -145,7 +151,7 @@ const fetchRestaurantOrders = TryCatch(async (req: AuthenticatedRequest, res: Re
     if (!user || user.role !== "seller") return res.status(403).json({ message: "Seller access required" });
     if (!restaurantId) return res.status(400).json({ message: "Restaurant ID is required" });
     
-    const  limit = req.query.limit ?  Number(req.query.limit): 0;
+    const limit = req.query.limit ? Math.min(Number(req.query.limit), 100) : 50;
     const orders = await Order.find({ restaurantId, paymentStatus: "paid" }).sort({ createdAt: -1 }).limit(limit).lean();
 
     return res.status(200).json({ 
@@ -204,6 +210,9 @@ const updateOrderStatus = TryCatch(async (req: AuthenticatedRequest, res: Respon
         ready_for_rider: "ORDER_READY_FOR_RIDER",
     };
 
+    const restLng = restaurant.autoLocation?.coordinates?.[0] ?? 0;
+    const restLat = restaurant.autoLocation?.coordinates?.[1] ?? 0;
+
     await publishOrderEvent({
         type: statusToEvent[order.status],
         data: {
@@ -212,8 +221,8 @@ const updateOrderStatus = TryCatch(async (req: AuthenticatedRequest, res: Respon
             userId: order.userId,
             deliveryAddress: order.deliveryAddress,
             restaurantLocation: {
-                longitude: restaurant.autoLocation.coordinates[0],
-                latitude: restaurant.autoLocation.coordinates[1],
+                longitude: restLng,
+                latitude: restLat,
             },
             distance: order.distance,
             riderAmount: order.riderAmount,
@@ -231,7 +240,16 @@ const fetchSingleOrder = TryCatch(async (req: AuthenticatedRequest, res: Respons
     const order = await Order.findById(orderId).lean();
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    if (order.userId !== user._id.toString()) return res.status(403).json({ message: "Not your order" });
+    if (order.userId !== user._id.toString()) {
+        if (user.role === "seller" && order.restaurantId) {
+            const restaurant = await Restaurant.findById(order.restaurantId).lean();
+            if (!restaurant || restaurant.ownerId !== user._id.toString()) {
+                return res.status(403).json({ message: "Not your order" });
+            }
+        } else {
+            return res.status(403).json({ message: "Not your order" });
+        }
+    }
 
     return res.status(200).json({ order });
 });
@@ -243,18 +261,27 @@ const assignRiderToOrder = TryCatch(async (req: AuthenticatedRequest, res: Respo
 
     const { orderId, riderId, riderName, riderPhone, riderImage } = req.body;
 
+    if (!orderId || !riderId) return res.status(400).json({ message: "orderId and riderId are required" });
+
     const order = await Order.findById(orderId).lean();
     if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (order.status !== "ready_for_rider") {
+        return res.status(400).json({ message: "Order is not ready for rider assignment" });
+    }
 
     if (order.riderId !== null) {
         return res.status(400).json({ message: "Order already assigned to a rider" });
     }
 
     const orderUpdated = await Order.findOneAndUpdate(
-        { _id: orderId },
+        { _id: orderId, riderId: null, status: "ready_for_rider" },
         { $set: { riderId, riderName, riderPhone, riderImage, status: "rider_assigned" } },
         { returnDocument: "after" }
     );
+    if (!orderUpdated) {
+        return res.status(400).json({ message: "Order already assigned to a rider" });
+    }
 
     try {
         await axios.post(`${process.env.REALTIME_SERVICE_URL}/api/internal/emit`, {
@@ -293,6 +320,9 @@ const assignRiderToOrder = TryCatch(async (req: AuthenticatedRequest, res: Respo
         console.warn("Failed to emit real-time event for rider assignment");
     }
 
+    const restaurant = await Restaurant.findById(order.restaurantId).lean();
+    const [restLng, restLat] = (restaurant?.autoLocation?.coordinates as [number, number]) || [0, 0];
+
     await publishOrderEvent({
         type: "ORDER_RIDER_ASSIGNED",
         data: {
@@ -302,8 +332,8 @@ const assignRiderToOrder = TryCatch(async (req: AuthenticatedRequest, res: Respo
             riderId,
             deliveryAddress: orderUpdated!.deliveryAddress,
             restaurantLocation: {
-                longitude: 0,
-                latitude: 0,
+                longitude: restLng,
+                latitude: restLat,
             },
             distance: orderUpdated!.distance,
             riderAmount: orderUpdated!.riderAmount,
@@ -374,6 +404,10 @@ const updateStatusRider = TryCatch(async (req: AuthenticatedRequest, res: Respon
         delivered: "ORDER_DELIVERED",
     };
 
+    const restLocation = await Restaurant.findById(order.restaurantId).lean();
+    const restLng = restLocation?.autoLocation?.coordinates?.[0] ?? 0;
+    const restLat = restLocation?.autoLocation?.coordinates?.[1] ?? 0;
+
     await publishOrderEvent({
         type: statusToEvent[order.status],
         data: {
@@ -381,7 +415,7 @@ const updateStatusRider = TryCatch(async (req: AuthenticatedRequest, res: Respon
             restaurantId: order.restaurantId,
             userId: order.userId,
             deliveryAddress: order.deliveryAddress,
-            restaurantLocation: { longitude: 0, latitude: 0 },
+            restaurantLocation: { longitude: restLng, latitude: restLat },
             distance: order.distance,
             riderAmount: order.riderAmount,
         },

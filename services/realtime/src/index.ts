@@ -8,7 +8,7 @@ import internalRoutes from "./internal.js"
 
 dotenv.config()
 
-const REQUIRED_ENV = ["JWT_SECRET", "RIDER_SERVICE_URL"]
+const REQUIRED_ENV = ["JWT_SECRET", "RIDER_SERVICE_URL", "INTERNAL_SERVICE_KEY"]
 for (const key of REQUIRED_ENV) {
     if (!process.env[key]) {
         console.error(`Missing required env var: ${key}`)
@@ -34,6 +34,8 @@ const internalLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many internal requests" },
 })
+
+app.set("trust proxy", 1)
 
 app.use(cors({
     origin: ["http://localhost:5173", "http://127.0.0.1:5173"],

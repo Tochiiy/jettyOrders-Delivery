@@ -19,7 +19,7 @@ L.Icon.Default.mergeOptions({
 interface Address {
     _id: string;
     formattedAddress: string;
-    mobile: number;
+    mobile: string;
 }
 
 const LocationPicker = ({ setLocation }: { setLocation: (lat: number, lng: number) => void }) => {
@@ -122,7 +122,7 @@ const AddressPage = () => {
         try {
             setAdding(true);
             await addressService.addAddress({
-                mobile: Number(mobile),
+                mobile,
                 formattedAddress,
                 latitude,
                 longitude,
@@ -203,7 +203,7 @@ const AddressPage = () => {
                             <label htmlFor="mobile-field" className="mb-1 block text-sm font-medium text-slate-700">Mobile Number</label>
                             <input
                                 id="mobile-field"
-                                type="number"
+                                type="tel"
                                 placeholder="Enter your phone number"
                                 value={mobile}
                                 onChange={(e) => setMobile(e.target.value)}

@@ -86,7 +86,7 @@ const startOrderConsumer = async () => {
       channel.ack(msg);
     } catch (err) {
       console.error("Order consumer error:", err);
-      channel.nack(msg, false, false);
+      channel.nack(msg, false, true);
     }
   });
 

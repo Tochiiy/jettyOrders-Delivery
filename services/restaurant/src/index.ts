@@ -25,6 +25,8 @@ for (const key of REQUIRED_ENV) {
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+app.set("trust proxy", 1);
+
 app.use(cors({
     origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
     credentials: true,
@@ -59,11 +61,12 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 const startServer = async () => {
     await connectDB();
-    connectRabbitMQ().catch((err) =>
+    connectRabbitMQ().then(() => {
+        startPaymentConsumer().catch((err) =>
+            console.error("Payment consumer failed:", err)
+        );
+    }).catch((err) =>
         console.error("RabbitMQ connection failed:", err)
-    );
-    startPaymentConsumer().catch((err) =>
-        console.error("Payment consumer failed:", err)
     );
     app.listen(PORT, () => {
         console.log(`Restaurant service running on port ${PORT}`);
