@@ -163,8 +163,20 @@
 
 ## Next Steps / Where to Continue
 1. ~~**All (38+ fixes)** — Production audit completed, all critical/high/medium bugs resolved (Jul 26, 2026)~~ **(done)**
-2. **Sales dashboard**: Sellers have `SellerOrders` but no aggregate sales view (placeholder only)
-3. **Tests**: Zero tests across all 6 services and frontend
+2. **Finish core logic & features** (in progress)
+3. **Sales dashboard**: Sellers have `SellerOrders` but no aggregate sales view (placeholder only)
+4. **Tests**: Write tests across all 6 services and frontend
+5. **Frontend deploy**: Vercel
+6. **Dockerize**: All backend services
+7. **Host**: AWS (backend services) + Render
+8. **CI/CD pipeline**: Lint + typecheck + test gate
+9. **Structured logging**: Levels + correlation IDs (pino/winston)
+10. **Error tracking**: Sentry or similar
+11. **HTTPS**: Reverse proxy (nginx/Caddy) or ALB
+12. **Internal rate limiters**: Add `internalLimiter` to auth + utils
+13. **Body size limits**: Tighten per-route (10kb on auth, 10mb on uploads)
+14. **CORS methods**: Restrict to actual HTTP verbs per route
+15. **DB migrations**: Tool like migrate-mongo for schema changes
 
 ## Rider Dashboard Features (added)
 - **Registration**: phone, drivers license, photo upload, location

@@ -376,9 +376,21 @@ cd frontend && npm run dev
 - ~~[ ] `trust proxy` missing on rate-limited services — added to all 5 services~~ **(done)**
 - ~~[ ] `fetchRestaurantOrders` `limit(0)` returned all docs — default 50, cap 100~~ **(done)**
 
-### Remaining
-- [ ] No tests
-- [ ] `Sales` tab in seller dashboard is placeholder
+### Remaining (planned — after core logic complete)
+- [ ] Finish core features / logic (in progress)
+- [ ] Sales dashboard — aggregate seller view (placeholder)
+- [ ] Tests — all 6 services + frontend
+- [ ] Deploy frontend → Vercel
+- [ ] Dockerize backend services
+- [ ] Host backend → AWS + Render
+- [ ] CI/CD pipeline — lint + typecheck + test gate
+- [ ] Structured logging — pino/winston with correlation IDs
+- [ ] Error tracking — Sentry
+- [ ] HTTPS — reverse proxy or ALB
+- [ ] internalLimiter on auth + utils internal routes
+- [ ] Per-route body size limits (10kb auth, 10mb uploads)
+- [ ] CORS — restrict to actual HTTP verbs per route
+- [ ] DB migrations — migrate-mongo or similar
 
 ---
 
