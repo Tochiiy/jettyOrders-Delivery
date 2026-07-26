@@ -1,13 +1,13 @@
 import amqp from "amqplib";
 
 let channel: amqp.Channel;
-let connection: amqp.Connection;
+let connection: amqp.ChannelModel;
 let ready: Promise<void> | null = null;
 
 const connectRabbitMQ = async () => {
     ready = new Promise(async (resolve, reject) => {
         try {
-            connection = await amqp.connect(process.env.RABBITMQ_URL as string);
+            connection = (await amqp.connect(process.env.RABBITMQ_URL as string)) as any;
             channel = await connection.createChannel();
             await channel.prefetch(1);
 

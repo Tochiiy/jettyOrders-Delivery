@@ -47,6 +47,10 @@ app.get("/", (_req, res) => {
   res.send("Realtime service is running")
 })
 
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" })
+})
+
 app.use("/api/internal", internalLimiter, internalRoutes)
 
 app.use((req, res) => {

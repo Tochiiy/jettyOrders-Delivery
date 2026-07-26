@@ -35,6 +35,10 @@ app.get("/", (_req, res) => {
   res.send("Rider service is running")
 })
 
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" })
+})
+
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (err?.code === "LIMIT_FILE_SIZE") {
         return res.status(400).json({ message: "File too large. Maximum size is 5MB." })

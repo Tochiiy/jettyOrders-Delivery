@@ -9,6 +9,8 @@ export interface IRider extends Document {
     isVerified: boolean;
     totalDeliveries: number;
     lastActiveAt?: Date;
+    createdAt: Date;
+    updatedAt: Date;
     currentLocation?: {
         type: "Point";
         coordinates: [number, number];
