@@ -5,6 +5,9 @@ import MenuItem from "../models/MenuItem.js";
 import Restaurant from "../models/Restaurant.js";
 import getBuffer from "../config/datauri.js";
 import axios from "axios";
+import { cacheGet, cacheSet, cacheDel, TTL } from "../config/cache.js";
+
+const menuCacheKey = (restaurantId: unknown) => `restaurant:menu:${String(restaurantId)}`;
 
 const addMenuItem = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
     const user = req.user;
@@ -39,6 +42,8 @@ const addMenuItem = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
         image,
         restaurantId: restaurant._id,
     });
+
+    await cacheDel(menuCacheKey(restaurant._id));
 
     res.status(201).json({ message: "Menu item added", menuItem });
 });
@@ -84,6 +89,8 @@ const updateMenuItem = TryCatch(async (req: AuthenticatedRequest, res: Response)
 
     if (!updated) return res.status(404).json({ message: "Menu item not found" });
 
+    await cacheDel(menuCacheKey(restaurant._id));
+
     res.status(200).json({ message: "Menu item updated", menuItem: updated });
 });
 
@@ -102,6 +109,8 @@ const toggleMenuItemAvailability = TryCatch(async (req: AuthenticatedRequest, re
     item.isAvailable = !item.isAvailable;
     await item.save();
 
+    await cacheDel(menuCacheKey(restaurant._id));
+
     const status = item.isAvailable ? "available" : "unavailable";
     res.status(200).json({ message: `${item.name} is now ${status}`, menuItem: item });
 });
@@ -118,6 +127,8 @@ const deleteMenuItem = TryCatch(async (req: AuthenticatedRequest, res: Response)
     const deleted = await MenuItem.findOneAndDelete({ _id: id, restaurantId: restaurant._id });
     if (!deleted) return res.status(404).json({ message: "Menu item not found" });
 
+    await cacheDel(menuCacheKey(restaurant._id));
+
     res.status(200).json({ message: "Menu item deleted" });
 });
 
@@ -125,9 +136,19 @@ const getPublicMenuItems = TryCatch(async (req: AuthenticatedRequest, res: Respo
     const { restaurantId } = req.params;
     if (!restaurantId) return res.status(400).json({ message: "restaurantId is required" });
 
+    const cacheKey = menuCacheKey(restaurantId);
+    const cached = await cacheGet<{ menuItems: unknown[] }>(cacheKey);
+    if (cached) {
+        res.set("X-Cache", "HIT");
+        return res.status(200).json(cached);
+    }
+
     const items = await MenuItem.find({ restaurantId, isAvailable: true }).sort({ category: 1, name: 1 }).lean();
 
-    res.status(200).json({ menuItems: items });
+    const payload = { menuItems: items };
+    await cacheSet(cacheKey, payload, TTL.MENU);
+    res.set("X-Cache", "MISS");
+    return res.status(200).json(payload);
 });
 
 const getAllAvailableItems = TryCatch(async (_req: AuthenticatedRequest, res: Response) => {

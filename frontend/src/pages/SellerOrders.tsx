@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppData } from "../context/AppContext";
 import * as orderService from "../services/orderService";
-import { BiArrowBack, BiCheckCircle, BiXCircle, BiTime, BiMapPin } from "react-icons/bi";
+import { BiArrowBack, BiCheckCircle, BiTime, BiMapPin } from "react-icons/bi";
 
 interface OrderItem {
     name: string;

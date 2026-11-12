@@ -41,8 +41,15 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
     }
 
     socket.on("order:new", onNewOrder);
+
+    const onOrderUpdate = () => {
+      fetchOrders();
+    };
+    socket.on("order:update", onOrderUpdate);
+
     return () => {
       socket.off("order:new", onNewOrder);
+      socket.off("order:update", onOrderUpdate);
     }
   }, [socket, audioUnlocked])
 

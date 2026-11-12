@@ -1,6 +1,6 @@
 import ORDER_ACTIONS from "../utils/orderflow";
 import type { IOrder } from "../types/types"
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { RESTAURANT_API, authHeaders } from "../services/api";
 import { toast } from "react-hot-toast";
@@ -33,10 +33,42 @@ const statusColor = (status: string) => {
   }
 }
 
+const NOTIFY_DELAY = 10000;
+
 const OrderCard = ({ order, onstatusUpdate }: Props) => {
   const [loading, setLoading] = useState(false);
-
+  const [riderNotifyVisible, setRiderNotifyVisible] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const actions = ORDER_ACTIONS[order.status] || [];
+
+  const shouldShowNotify = order.status === "ready_for_rider" && !order.riderId;
+
+  useEffect(() => {
+    if (shouldShowNotify) {
+      setRiderNotifyVisible(false);
+      timerRef.current = setTimeout(() => setRiderNotifyVisible(true), NOTIFY_DELAY);
+    } else {
+      setRiderNotifyVisible(false);
+    }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [order.status, order.riderId]);
+
+  const notifyRider = async () => {
+    try {
+      setLoading(true);
+      setRiderNotifyVisible(false);
+      await axios.put(`${RESTAURANT_API}/api/order/${order._id}/status`, { status: "ready_for_rider" }, { headers: authHeaders() })
+      toast.success("Rider notified");
+      timerRef.current = setTimeout(() => setRiderNotifyVisible(true), NOTIFY_DELAY);
+      onstatusUpdate?.();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to notify rider");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const updateStatus = async (status: string) => {
     try {
@@ -74,6 +106,16 @@ const OrderCard = ({ order, onstatusUpdate }: Props) => {
       </div>
 
       <p className="text-xs text-gray-400">Payment: {order.paymentStatus}</p>
+
+      {riderNotifyVisible && (
+        <button
+          onClick={notifyRider}
+          disabled={loading}
+          className="w-full rounded-lg bg-red-500 py-2 text-sm font-semibold text-white hover:bg-red-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {loading ? "Notifying..." : "Notify Rider"}
+        </button>
+      )}
 
       {order.paymentStatus === "paid" && actions.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-2">

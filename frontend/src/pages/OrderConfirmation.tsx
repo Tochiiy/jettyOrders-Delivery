@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
 import { getOrderById } from "../services/orderService";
+import * as paymentService from "../services/paymentService";
+import UserOrderMap from "../components/UserOrderMap";
 import type { IOrder } from "../types/types";
 import { BiArrowBack, BiPackage, BiBus, BiCreditCard, BiTag, BiTime, BiCheckCircle } from "react-icons/bi";
 
@@ -30,9 +32,15 @@ const statusLabel: Record<string, string> = {
 const OrderConfirmation = () => {
     const { orderId } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { socket } = useSocket();
     const [order, setOrder] = useState<IOrder | null>(null);
     const [loading, setLoading] = useState(true);
+    const [riderLocation, setRiderLocation] = useState<[number, number] | null>(null);
+
+    const stripeIntentId = searchParams.get("payment_intent");
+    const stripeRedirectStatus = searchParams.get("redirect_status");
+    const verifiedRef = useRef(false);
 
     const fetchOrder = async () => {
         if (!orderId) return;
@@ -57,6 +65,27 @@ const OrderConfirmation = () => {
             socket.off("order:update", fetchOrder);
         };
     }, [socket]);
+
+    useEffect(() => {
+        if (!socket) return;
+        const onRiderLocation = ({ lat, lng }: { lat: number; lng: number }) => {
+            setRiderLocation([lat, lng]);
+        };
+        socket.on("rider:location", onRiderLocation);
+        return () => {
+            socket.off("rider:location", onRiderLocation);
+        };
+    }, [socket]);
+
+    useEffect(() => {
+        if (!orderId || !stripeIntentId || stripeRedirectStatus !== "succeeded") return;
+        if (verifiedRef.current) return;
+        verifiedRef.current = true;
+
+        paymentService.confirmPayment({ paymentIntentId: stripeIntentId, orderId })
+            .then(() => fetchOrder())
+            .catch((err) => console.error("Stripe return verification failed:", err));
+    }, [orderId, stripeIntentId, stripeRedirectStatus]);
 
     if (loading) {
         return (
@@ -143,6 +172,20 @@ const OrderConfirmation = () => {
                     <p className="mt-2 text-xs text-slate-400">{order.deliveryAddress.formattedAddress}</p>
                     <p className="mt-2 text-xs text-slate-400">{order.deliveryAddress.mobile}</p>
                 </div>
+
+                {(order.status === "rider_assigned" || order.status === "pickedUp") && (
+                    riderLocation ? (
+                        <UserOrderMap
+                            riderLocation={riderLocation}
+                            deliveryLocation={[
+                                order.deliveryAddress.latitude,
+                                order.deliveryAddress.longitude,
+                            ]}
+                        />
+                    ) : (
+                        <p className="mt-3 text-xs text-slate-400">Waiting for rider location...</p>
+                    )
+                )}
             </div>
         </div>
     );

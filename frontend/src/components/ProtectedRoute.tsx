@@ -1,6 +1,7 @@
 import { useAppData } from "../context/AppContext";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import RiderDashboard from "../pages/RiderDashboard";
+import Admin from "../pages/Admin";
 
 
 const ProtectedRoute = () => {
@@ -17,6 +18,11 @@ const ProtectedRoute = () => {
     if (user?.role === "rider") {
         if (location.pathname === "/account") return <Outlet />;
         return <RiderDashboard />;
+    }
+
+    if (user?.role === "admin") {
+        if (location.pathname === "/account") return <Outlet />;
+        return <Admin />;
     }
 
     if (user?.role === "seller") {

@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 1180" width="1380" height="1180" role="img" aria-labelledby="flowTitle flowDesc">
+  <title id="flowTitle">Order lifecycle sequence</title>
+  <desc id="flowDesc">Sequence from order creation through Stripe payment, RabbitMQ events, rider dispatch, live location and delivery.</desc>
+
+  <defs>
+    <marker id="seqArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#334155"/>
+    </marker>
+    <marker id="seqArrowMuted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <style>
+    .bg { fill: #ffffff; }
+    .title { font: 700 26px Inter, "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+    .subtitle { font: 400 13px Inter, "Segoe UI", Arial, sans-serif; fill: #64748b; }
+    .head { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .head-cust { fill: #fff5f5; stroke: #e23744; stroke-width: 1.5; }
+    .head-blue { fill: #f5f8ff; stroke: #2563eb; stroke-width: 1.5; }
+    .head-green { fill: #f4fbf7; stroke: #059669; stroke-width: 1.5; }
+    .pname { font: 700 13px Inter, "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+    .prole { font: 400 10.5px Inter, "Segoe UI", Arial, sans-serif; fill: #64748b; }
+    .life { stroke: #cbd5e1; stroke-width: 1.2; stroke-dasharray: 4 5; }
+    .req { fill: none; stroke: #334155; stroke-width: 1.5; }
+    .res { fill: none; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .label { font: 500 10.5px Inter, "Segoe UI", Arial, sans-serif; fill: #334155; }
+    .label-muted { font: 400 10.5px Inter, "Segoe UI", Arial, sans-serif; fill: #64748b; }
+    .phase { font: 700 10px Inter, "Segoe UI", Arial, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; }
+    .phase-line { stroke: #e2e8f0; stroke-width: 1; stroke-dasharray: 3 5; }
+    .note { font: 400 11px Inter, "Segoe UI", Arial, sans-serif; fill: #64748b; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1380" height="1180"/>
+  <rect x="0.5" y="0.5" width="1379" height="1179" fill="none" stroke="#e2e8f0"/>
+
+  <text class="title" x="48" y="48">Order lifecycle · request and event sequence</text>
+  <text class="subtitle" x="48" y="72">From cart checkout to a delivered order, including payment verification and dispatch</text>
+
+  <!-- Lifelines -->
+  <line class="life" x1="150" y1="152" x2="150" y2="1130"/>
+  <line class="life" x1="310" y1="152" x2="310" y2="1130"/>
+  <line class="life" x1="470" y1="152" x2="470" y2="1130"/>
+  <line class="life" x1="630" y1="152" x2="630" y2="1130"/>
+  <line class="life" x1="790" y1="152" x2="790" y2="1130"/>
+  <line class="life" x1="950" y1="152" x2="950" y2="1130"/>
+  <line class="life" x1="1110" y1="152" x2="1110" y2="1130"/>
+  <line class="life" x1="1270" y1="152" x2="1270" y2="1130"/>
+
+  <!-- Participants -->
+  <rect class="head-cust" x="78" y="96" width="144" height="56" rx="9"/>
+  <text class="pname" x="94" y="119">Customer</text>
+  <text class="prole" x="94" y="137">React SPA</text>
+
+  <rect class="head" x="238" y="96" width="144" height="56" rx="9"/>
+  <text class="pname" x="254" y="119">Gateway</text>
+  <text class="prole" x="254" y="137">http-proxy</text>
+
+  <rect class="head-green" x="398" y="96" width="144" height="56" rx="9"/>
+  <text class="pname" x="414" y="119">Restaurant</text>
+  <text class="prole" x="414" y="137">orders · menu</text>
+
+  <rect class="head" x="558" y="96" width="144" height="56" rx="9"/>
+  <text class="pname" x="574" y="119">Utils</text>
+  <text class="prole" x="574" y="137">payments</text>
+
+  <rect class="head" x="718" y="96" width="144" height="56" rx="9"/>
+  <text class="pname" x="734" y="119">Stripe</text>
+  <text class="prole" x="734" y="137">provider</text>
+
+  <rect class="head" x="878" y="96" width="144" height="56" rx="9"/>
+  <text class="pname" x="894" y="119">RabbitMQ</text>
+  <text class="prole" x="894" y="137">broker</text>
+
+  <rect class="head" x="1038" y="96" width="144" height="56" rx="9"/>
+  <text class="pname" x="1054" y="119">Rider</text>
+  <text class="prole" x="1054" y="137">dispatch</text>
+
+  <rect class="head-blue" x="1198" y="96" width="144" height="56" rx="9"/>
+  <text class="pname" x="1214" y="119">Realtime</text>
+  <text class="prole" x="1214" y="137">Socket.IO</text>
+
+  <!-- Phase separators -->
+  <line class="phase-line" x1="130" y1="552" x2="1350" y2="552"/>
+  <text class="phase" x="24" y="549" fill="#b45309">payment</text>
+  <line class="phase-line" x1="130" y1="936" x2="1350" y2="936"/>
+  <text class="phase" x="24" y="933" fill="#059669">dispatch</text>
+
+  <!-- 1 -->
+  <path class="req" d="M150,190 L302,190" marker-end="url(#seqArrow)"/>
+  <text class="label" x="230" y="182" text-anchor="middle">POST /api/order/create</text>
+  <!-- 2 -->
+  <path class="req" d="M310,238 L462,238" marker-end="url(#seqArrow)"/>
+  <text class="label" x="390" y="230" text-anchor="middle">insert order: placed, unpaid</text>
+  <!-- 3 -->
+  <path class="res" d="M470,286 L158,286" marker-end="url(#seqArrowMuted)"/>
+  <text class="label-muted" x="310" y="278" text-anchor="middle">201 { order, totals }</text>
+  <!-- 4 -->
+  <path class="req" d="M150,334 L622,334" marker-end="url(#seqArrow)"/>
+  <text class="label" x="390" y="326" text-anchor="middle">POST /api/payment/create-payment-intent</text>
+  <!-- 5 -->
+  <path class="req" d="M630,382 L782,382" marker-end="url(#seqArrow)"/>
+  <text class="label" x="706" y="374" text-anchor="middle">create PaymentIntent</text>
+  <!-- 6 -->
+  <path class="res" d="M790,430 L158,430" marker-end="url(#seqArrowMuted)"/>
+  <text class="label-muted" x="474" y="422" text-anchor="middle">client_secret → Stripe Elements</text>
+  <!-- 7 -->
+  <path class="req" d="M150,478 L622,478" marker-end="url(#seqArrow)"/>
+  <text class="label" x="390" y="470" text-anchor="middle">POST /api/payment/confirm { paymentIntentId }</text>
+  <!-- 8 -->
+  <path class="req" d="M630,526 L782,526" marker-end="url(#seqArrow)"/>
+  <text class="label" x="706" y="518" text-anchor="middle">retrieve, verify succeeded</text>
+
+  <!-- 9 -->
+  <path class="req" d="M630,574 L942,574" marker-end="url(#seqArrow)"/>
+  <text class="label" x="786" y="566" text-anchor="middle">publish payment_event</text>
+  <!-- 10 -->
+  <path class="req" d="M950,622 L478,622" marker-end="url(#seqArrow)"/>
+  <text class="label" x="714" y="614" text-anchor="middle">consume → paymentStatus = paid</text>
+  <!-- 11 -->
+  <path class="req" d="M470,670 L1262,670" marker-end="url(#seqArrow)"/>
+  <text class="label" x="866" y="662" text-anchor="middle">POST /api/internal/emit  order:new</text>
+  <!-- 12 -->
+  <path class="req" d="M1270,718 L158,718" marker-end="url(#seqArrow)"/>
+  <text class="label" x="714" y="710" text-anchor="middle">order:update → seller and customer</text>
+  <!-- 13 -->
+  <path class="req" d="M470,766 L942,766" marker-end="url(#seqArrow)"/>
+  <text class="label" x="706" y="758" text-anchor="middle">publish order_events (ready)</text>
+  <!-- 14 -->
+  <path class="req" d="M950,814 L1102,814" marker-end="url(#seqArrow)"/>
+  <text class="label" x="1026" y="806" text-anchor="middle">consume → assign nearest rider</text>
+  <!-- 15 -->
+  <path class="req" d="M1110,862 L1262,862" marker-end="url(#seqArrow)"/>
+  <text class="label" x="1186" y="854" text-anchor="middle">location:update</text>
+  <!-- 16 -->
+  <path class="req" d="M1270,910 L158,910" marker-end="url(#seqArrow)"/>
+  <text class="label" x="714" y="902" text-anchor="middle">rider:location → live map</text>
+
+  <!-- 17 -->
+  <path class="req" d="M150,958 L302,958" marker-end="url(#seqArrow)"/>
+  <text class="label" x="230" y="950" text-anchor="middle">PATCH /api/order/:id/status</text>
+  <!-- 18 -->
+  <path class="req" d="M310,1006 L462,1006" marker-end="url(#seqArrow)"/>
+  <text class="label" x="390" y="998" text-anchor="middle">update status</text>
+  <!-- 19 -->
+  <path class="req" d="M470,1054 L1262,1054" marker-end="url(#seqArrow)"/>
+  <text class="label" x="866" y="1046" text-anchor="middle">POST /api/internal/emit  order:update (picked_up / delivered)</text>
+  <!-- 20 -->
+  <path class="req" d="M1270,1102 L158,1102" marker-end="url(#seqArrow)"/>
+  <text class="label" x="714" y="1094" text-anchor="middle">order:update → delivered</text>
+
+  <text class="note" x="24" y="1156">Solid: request or event. Dashed: response. All browser HTTP goes through the gateway; Socket.IO upgrades on /socket.io are proxied to realtime.</text>
+</svg>

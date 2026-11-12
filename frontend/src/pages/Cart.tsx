@@ -3,7 +3,6 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useAppData } from "../context/AppContext";
 import { BsTrash, BsPlusLg, BsDashLg } from "react-icons/bs";
 import { BiPackage, BiCreditCard, BiBus, BiTag, BiPlusCircle } from "react-icons/bi";
-import { toast } from "react-hot-toast";
 import * as restaurantService from "../services/restaurantService";
 
 const Cart = () => {

@@ -72,11 +72,19 @@ const initSocketServer = (server: http.Server) => {
       console.log("User left rooms:", socket.rooms)
     })
 
-    socket.on("location:update", (data: { restaurantId?: string; lat: number; lng: number }) => {
+    socket.on("location:update", (data: { restaurantId?: string; userId?: string; lat: number; lng: number }) => {
       if (typeof data.lat !== "number" || typeof data.lng !== "number") return
 
       if (data.restaurantId) {
         io.to(`restaurant-${data.restaurantId}`).emit("rider:location", {
+          riderId: userId,
+          lat: data.lat,
+          lng: data.lng,
+        })
+      }
+
+      if (typeof data.userId === "string" && data.userId) {
+        io.to(`user:${data.userId}`).emit("rider:location", {
           riderId: userId,
           lat: data.lat,
           lng: data.lng,

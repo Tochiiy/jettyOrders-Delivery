@@ -4,6 +4,7 @@ export interface IRider extends Document {
     userId: string;
     phone: string;
     image: string;
+    aadharNumber?: string;
     driversLicenseNumber: string;
     isAvailable: boolean;
     isVerified: boolean;
@@ -20,6 +21,7 @@ export interface IRider extends Document {
 const riderSchema: Schema<IRider> = new mongoose.Schema({
     userId: { type: String, required: true, unique: true },
     phone: { type: String, required: true },
+    aadharNumber: { type: String },
     driversLicenseNumber: { type: String, required: true, unique: true },
     image: { type: String, required: true },
     isAvailable: { type: Boolean, default: false },

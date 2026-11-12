@@ -1,8 +1,11 @@
 node_modules/
 dist/
+tomato-source-code/
 .env*
+!.env.example
 __pycache__/
 *.pyc
+.venv/
 .DS_Store
 Thumbs.db
 *.log

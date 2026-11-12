@@ -132,6 +132,7 @@ export interface IRider {
     userId: string;
     phone: string;
     image: string;
+    aadharNumber?: string;
     driversLicenseNumber: string;
     isAvailable: boolean;
     isVerified: boolean;

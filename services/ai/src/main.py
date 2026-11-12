@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 import sentry_sdk
 from agents import suggest_dish_chain, suggest_restaurants_chain, generate_review_chain
 from auth import verify_token
+from cache import cache_get, cache_set
 from config import settings
 
 required_vars = {"GROQ_API_KEY": settings.groq_api_key, "JWT_SECRET": settings.jwt_secret}
@@ -65,13 +66,20 @@ async def suggest_dish(request: Request, req: SuggestDishRequest, _user=Depends(
         return {"suggestion": "Too many menu items provided."}
     menu_str = ", ".join(req.menu_items[:50])
     user_context = (req.user_context or "")[:500]
-    result = await suggest_dish_chain.ainvoke({
+    cache_payload = {
         "restaurant_name": req.restaurant_name[:200],
         "menu_items": menu_str,
         "user_context": user_context or "No specific preference",
-    })
+    }
+
+    cached = await cache_get("dish", cache_payload)
+    if cached is not None:
+        return {"suggestion": cached}
+
+    result = await suggest_dish_chain.ainvoke(cache_payload)
     if len(result) > 3000:
         result = result[:3000]
+    await cache_set("dish", cache_payload, result)
     return {"suggestion": result}
 
 
@@ -83,12 +91,19 @@ async def suggest_restaurants(request: Request, req: SuggestRestaurantsRequest, 
     restaurants_str = "\n".join(
         f"- {str(r.get('name', ''))[:100]} ({str(r.get('cuisine', 'general'))[:50]})" for r in restaurants
     )
-    result = await suggest_restaurants_chain.ainvoke({
+    cache_payload = {
         "restaurants": restaurants_str,
         "preferences": preferences or "No specific preference",
-    })
+    }
+
+    cached = await cache_get("restaurants", cache_payload)
+    if cached is not None:
+        return {"suggestion": cached}
+
+    result = await suggest_restaurants_chain.ainvoke(cache_payload)
     if len(result) > 3000:
         result = result[:3000]
+    await cache_set("restaurants", cache_payload, result)
     return {"suggestion": result}
 
 
@@ -97,13 +112,20 @@ async def suggest_restaurants(request: Request, req: SuggestRestaurantsRequest, 
 async def generate_review(request: Request, req: GenerateReviewRequest, _user=Depends(verify_token)):
     items = ", ".join(req.items[:20])
     feedback = (req.feedback or "")[:500]
-    result = await generate_review_chain.ainvoke({
+    cache_payload = {
         "restaurant_name": req.restaurant_name[:200],
         "items": items,
         "feedback": feedback or "No additional feedback",
-    })
+    }
+
+    cached = await cache_get("review", cache_payload)
+    if cached is not None:
+        return {"review": cached}
+
+    result = await generate_review_chain.ainvoke(cache_payload)
     if len(result) > 2000:
         result = result[:2000]
+    await cache_set("review", cache_payload, result)
     return {"review": result}
 
 

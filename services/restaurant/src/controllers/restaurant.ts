@@ -7,10 +7,25 @@ import User from "../models/User.js";
 import getBuffer from "../config/datauri.js";
 import axios from "axios";
 import jwt from "jsonwebtoken";
+import { cacheGet, cacheSet, cacheDel, cacheInvalidatePattern, TTL } from "../config/cache.js";
 
 const JWT_SECRET = process.env.JWT_SECRET as string
 const signToken = (userId: string, restaurantId: string | null) =>
   jwt.sign({ userId, restaurantId }, JWT_SECRET, { expiresIn: "7d" })
+
+const listCacheKey = (search: unknown, verified: unknown) =>
+  `restaurant:list:${verified === "true" ? "verified" : "any"}:${typeof search === "string" ? search.toLowerCase().slice(0, 80) : ""}`;
+
+const invalidateRestaurantCaches = async (restaurantId?: string) => {
+  await Promise.all([
+    cacheInvalidatePattern("restaurant:list:*"),
+    cacheInvalidatePattern("restaurant:nearby:*"),
+  ]);
+
+  if (restaurantId) {
+    await cacheDel(`restaurant:one:${restaurantId}`, `restaurant:menu:${restaurantId}`);
+  }
+};
 
 const addRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
     const user = req.user;
@@ -65,6 +80,8 @@ const addRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Response) 
     });
 
     await User.findByIdAndUpdate(user._id, { restaurantId: String(newRestaurant._id) });
+
+    await invalidateRestaurantCaches(String(newRestaurant._id));
 
     const token = signToken(String(user._id), String(newRestaurant._id))
 
@@ -134,6 +151,8 @@ const toggleRestaurantStatus = TryCatch(async (req: AuthenticatedRequest, res: R
     restaurant.isOpen = status;
     await restaurant.save();
 
+    await invalidateRestaurantCaches(String(restaurant._id));
+
     res.status(200).json({ success: true, message: "Status updated", restaurant });
 });
 
@@ -149,12 +168,21 @@ const editRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Response)
     );
     if (!restaurant) return res.status(404).json({ success: false, message: "Restaurant not found", error: { code: "RESTAURANT_NOT_FOUND", message: "Restaurant not found" } });
 
+    await invalidateRestaurantCaches(String(restaurant._id));
+
     res.status(200).json({ success: true, message: "Restaurant updated", restaurant });
 });
 
 const getNearbyRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
     const { latitude, longitude, radius = 5000, search, verified } = req.query;
     if (!latitude || !longitude) return res.status(400).json({ success: false, message: "Latitude and longitude are required", error: { code: "INVALID_LOCATION", message: "Latitude and longitude are required" } });
+
+    const cacheKey = `restaurant:nearby:${Number(latitude).toFixed(3)}:${Number(longitude).toFixed(3)}:${Number(radius)}:${verified === "true" ? "verified" : "any"}:${typeof search === "string" ? search.toLowerCase().slice(0, 80) : ""}`;
+    const cached = await cacheGet<{ success: boolean; message: string; count: number; restaurants: unknown[] }>(cacheKey);
+    if (cached) {
+        res.set("X-Cache", "HIT");
+        return res.status(200).json(cached);
+    }
 
     const query: any = {};
     if (verified === "true") query.isVerified = true;
@@ -187,11 +215,21 @@ const getNearbyRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Resp
         }
     ]);
 
-    res.status(200).json({ success: true, message: "Restaurants found", count: restaurants.length, restaurants });
+    const payload = { success: true, message: "Restaurants found", count: restaurants.length, restaurants };
+    await cacheSet(cacheKey, payload, TTL.NEARBY);
+    res.set("X-Cache", "MISS");
+    return res.status(200).json(payload);
 });
 
 const getAllRestaurants = TryCatch(async (_req: AuthenticatedRequest, res: Response) => {
     const { search, verified } = _req.query;
+
+    const cacheKey = listCacheKey(search, verified);
+    const cached = await cacheGet<{ success: boolean; message: string; count: number; restaurants: unknown[] }>(cacheKey);
+    if (cached) {
+        res.set("X-Cache", "HIT");
+        return res.status(200).json(cached);
+    }
 
     const query: any = {};
     if (verified === "true") query.isVerified = true;
@@ -205,14 +243,29 @@ const getAllRestaurants = TryCatch(async (_req: AuthenticatedRequest, res: Respo
 
     const restaurants = await Restaurant.find(query).sort({ isOpen: -1, createdAt: -1 }).lean();
 
-    res.status(200).json({ success: true, message: "Restaurants fetched", count: restaurants.length, restaurants });
+    const payload = { success: true, message: "Restaurants fetched", count: restaurants.length, restaurants };
+    await cacheSet(cacheKey, payload, TTL.LIST);
+    res.set("X-Cache", "MISS");
+    return res.status(200).json(payload);
 });
 
 const fetchSingleRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
+
+    const cacheKey = `restaurant:one:${id}`;
+    const cached = await cacheGet<{ success: boolean; message: string; restaurant: unknown }>(cacheKey);
+    if (cached) {
+        res.set("X-Cache", "HIT");
+        return res.status(200).json(cached);
+    }
+
     const restaurant = await Restaurant.findById(id).lean();
     if (!restaurant) return res.status(404).json({ success: false, message: "Restaurant not found", error: { code: "RESTAURANT_NOT_FOUND", message: "Restaurant not found" } });
-    res.status(200).json({ success: true, message: "Restaurant fetched", restaurant });
+
+    const payload = { success: true, message: "Restaurant fetched", restaurant };
+    await cacheSet(cacheKey, payload, TTL.SINGLE);
+    res.set("X-Cache", "MISS");
+    return res.status(200).json(payload);
 })
 
 const deleteRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
@@ -225,6 +278,8 @@ const deleteRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Respons
     await MenuItem.deleteMany({ restaurantId: restaurant._id });
     await Restaurant.findByIdAndDelete(restaurant._id);
     await User.findByIdAndUpdate(user._id, { restaurantId: null });
+
+    await invalidateRestaurantCaches(String(restaurant._id));
 
     const token = jwt.sign(
         {

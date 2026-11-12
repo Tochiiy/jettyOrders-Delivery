@@ -122,7 +122,7 @@ const AddressPage = () => {
         try {
             setAdding(true);
             await addressService.addAddress({
-                mobile,
+                mobile: Number(mobile),
                 formattedAddress,
                 latitude,
                 longitude,

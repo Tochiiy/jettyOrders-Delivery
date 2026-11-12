@@ -34,7 +34,7 @@ const startOrderConsumer = async () => {
       const event: OrderEvent = JSON.parse(msg.content.toString());
       console.log("Order event received:", event.type, event.data.orderId);
 
-      if (event.type === "ORDER_PLACED") {
+      if (event.type === "ORDER_PLACED" || event.type === "ORDER_READY_FOR_RIDER") {
         const { restaurantLocation, deliveryAddress, riderAmount, restaurantId } = event.data;
 
         const nearbyRiders = await Rider.find({

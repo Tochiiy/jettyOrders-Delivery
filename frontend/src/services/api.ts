@@ -9,5 +9,6 @@ export const UTILS_API = envUrl("VITE_UTILS_API", "http://localhost:5002")
 export const AI_API = envUrl("VITE_AI_API", "http://localhost:5003")
 export const REALTIME_API = envUrl("VITE_REALTIME_API", "http://localhost:5005")
 export const RIDER_API = envUrl("VITE_RIDER_API", "http://localhost:5004")
+export const ADMIN_API = envUrl("VITE_ADMIN_API", "http://localhost:5006")
 
 export const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });

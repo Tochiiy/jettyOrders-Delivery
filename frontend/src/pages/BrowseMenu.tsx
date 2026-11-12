@@ -5,6 +5,8 @@ import { BsCartPlus } from "react-icons/bs";
 import { IoLocationOutline } from "react-icons/io5";
 import { useAppData } from "../context/AppContext";
 import * as menuService from "../services/menuService";
+import * as aiService from "../services/aiService";
+import AISuggestion from "../components/AISuggestion";
 
 interface IRestaurantRef {
     _id: string;
@@ -123,6 +125,23 @@ const BrowseMenu = () => {
                         </div>
                     )}
                 </div>
+
+                <AISuggestion
+                    title="Dish Recommendations"
+                    description="Tell us what you're in the mood for and get dish suggestions from every restaurant."
+                    placeholder="e.g. 'I want something spicy' or 'a light meal'"
+                    buttonText="Suggest"
+                    apiCall={(input) =>
+                        aiService.suggestDish({
+                            restaurantName: "All Available",
+                            menuItems: items.map((i) => i.name),
+                            userContext: input,
+                        })
+                    }
+                    extractResult={(res) => res.data.suggestion}
+                />
+
+                <div className="mb-8" />
 
                 <div className="grid gap-8">
                     {Object.entries(grouped).map(([restId, { restaurant, items: restItems }]) => (

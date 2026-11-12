@@ -184,7 +184,7 @@ const updateOrderStatus = TryCatch(async (req: AuthenticatedRequest, res: Respon
     if (restaurant.ownerId !== user._id.toString()) return res.status(403).json({ message: "Not allowed to update your restaurant's order" });
 
     order.status = status;
-    await order.save();
+    await order.save({ validateBeforeSave: false });
 
     try {
         await axios.post(`${process.env.REALTIME_SERVICE_URL}/api/internal/emit`, {

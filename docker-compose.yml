@@ -1,0 +1,254 @@
+name: jettyorders
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-node: &node
+  restart: unless-stopped
+  init: true
+  networks:
+    - backend
+  logging: *default-logging
+
+x-healthcheck: &healthcheck
+  interval: 15s
+  timeout: 5s
+  retries: 6
+  start_period: 20s
+
+x-healthcheck-fast: &healthcheck-fast
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 10s
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - backend
+    logging: *default-logging
+    healthcheck:
+      <<: *healthcheck-fast
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\" | grep -q 1"]
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-jetty}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-jetty}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - backend
+    logging: *default-logging
+    healthcheck:
+      <<: *healthcheck-fast
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+
+  auth:
+    <<: *node
+    build: ./services/auth
+    env_file:
+      - ./services/auth/.env
+    environment:
+      PORT: "5000"
+      MONGO_URI: mongodb://mongo:27017/${MONGO_DB:-jettyorders}
+    ports:
+      - "5000:5000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5000/health || exit 1"]
+
+  restaurant:
+    <<: *node
+    build: ./services/restaurant
+    env_file:
+      - ./services/restaurant/.env
+    environment:
+      PORT: "5001"
+      MONGO_URI: mongodb://mongo:27017/${MONGO_DB:-jettyorders}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-jetty}:${RABBITMQ_PASSWORD:-jetty}@rabbitmq:5672
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-jetty-internal}
+      UTILS_SERVICE: http://utils:5002
+      REALTIME_SERVICE_URL: http://realtime:5005
+      PAYMENT_QUEUE: ${PAYMENT_QUEUE:-payment_event}
+      ORDER_EVENT_QUEUE: ${ORDER_EVENT_QUEUE:-order_events}
+    ports:
+      - "5001:5001"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5001/health || exit 1"]
+
+  utils:
+    <<: *node
+    build: ./services/utils
+    env_file:
+      - ./services/utils/.env
+    environment:
+      PORT: "5002"
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-jetty}:${RABBITMQ_PASSWORD:-jetty}@rabbitmq:5672
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-jetty-internal}
+      RESTAURANT_SERVICE: http://restaurant:5001
+      PAYMENT_QUEUE: ${PAYMENT_QUEUE:-payment_event}
+    ports:
+      - "5002:5002"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5002/health || exit 1"]
+
+  rider:
+    <<: *node
+    build: ./services/rider
+    env_file:
+      - ./services/rider/.env
+    environment:
+      PORT: "5004"
+      MONGO_URI: mongodb://mongo:27017/${MONGO_DB:-jettyorders}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-jetty}:${RABBITMQ_PASSWORD:-jetty}@rabbitmq:5672
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-jetty-internal}
+      RESTAURANT_SERVICE: http://restaurant:5001
+      UTILS_SERVICE: http://utils:5002
+      REALTIME_SERVICE_URL: http://realtime:5005
+      ORDER_EVENT_QUEUE: ${ORDER_EVENT_QUEUE:-order_events}
+    ports:
+      - "5004:5004"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5004/health || exit 1"]
+
+  realtime:
+    <<: *node
+    build: ./services/realtime
+    env_file:
+      - ./services/realtime/.env
+    environment:
+      PORT: "5005"
+      RIDER_SERVICE_URL: http://rider:5004
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-jetty-internal}
+    ports:
+      - "5005:5005"
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5005/health || exit 1"]
+
+  admin:
+    <<: *node
+    build: ./services/admin
+    env_file:
+      - ./services/admin/.env
+    environment:
+      PORT: "5006"
+      MONGO_URI: mongodb://mongo:27017/${MONGO_DB:-jettyorders}
+    ports:
+      - "5006:5006"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5006/health || exit 1"]
+
+  gateway:
+    <<: *node
+    build: ./services/gateway
+    env_file:
+      - ./services/gateway/.env
+    environment:
+      PORT: "5007"
+      AUTH_SERVICE_URL: http://auth:5000
+      RESTAURANT_SERVICE_URL: http://restaurant:5001
+      UTILS_SERVICE_URL: http://utils:5002
+      AI_SERVICE_URL: http://ai:5003
+      RIDER_SERVICE_URL: http://rider:5004
+      REALTIME_SERVICE_URL: http://realtime:5005
+      ADMIN_SERVICE_URL: http://admin:5006
+    ports:
+      - "5007:5007"
+    depends_on:
+      - auth
+      - restaurant
+      - utils
+      - ai
+      - rider
+      - realtime
+      - admin
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5007/health || exit 1"]
+
+  ai:
+    build: ./services/ai
+    restart: unless-stopped
+    init: true
+    env_file:
+      - ./services/ai/.env
+    environment:
+      PORT: "5003"
+    ports:
+      - "5003:5003"
+    networks:
+      - backend
+    logging: *default-logging
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5003/health')\" || exit 1"]
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:5007
+        VITE_RESTAURANT_API: http://localhost:5007
+        VITE_UTILS_API: http://localhost:5007
+        VITE_AI_API: http://localhost:5007
+        VITE_RIDER_API: http://localhost:5007
+        VITE_ADMIN_API: http://localhost:5007
+        VITE_REALTIME_API: http://localhost:5007
+        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY:-}
+        VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - gateway
+    networks:
+      - backend
+    logging: *default-logging
+
+volumes:
+  mongo-data:
+  rabbitmq-data:
+
+networks:
+  backend:
+    driver: bridge

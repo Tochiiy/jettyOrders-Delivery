@@ -1,0 +1,220 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 900" width="1360" height="900" role="img" aria-labelledby="archTitle archDesc">
+  <title id="archTitle">JettyOrders runtime topology</title>
+  <desc id="archDesc">Browser, API gateway, Socket.IO realtime service, six application services, MongoDB, RabbitMQ and external providers.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#e23744"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#059669"/>
+    </marker>
+    <marker id="arrowGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <style>
+    .bg { fill: #ffffff; }
+    .title { font: 700 26px Inter, "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+    .subtitle { font: 400 13px Inter, "Segoe UI", Arial, sans-serif; fill: #64748b; }
+    .group-label { font: 700 11px Inter, "Segoe UI", Arial, sans-serif; fill: #64748b; letter-spacing: 1.4px; text-transform: uppercase; }
+    .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .box-soft { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.5; }
+    .box-accent { fill: #fff5f5; stroke: #e23744; stroke-width: 1.5; }
+    .box-blue { fill: #f5f8ff; stroke: #2563eb; stroke-width: 1.5; }
+    .box-green { fill: #f4fbf7; stroke: #059669; stroke-width: 1.5; }
+    .name { font: 700 15px Inter, "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+    .port { font: 600 12px "JetBrains Mono", Consolas, monospace; fill: #e23744; }
+    .port-blue { font: 600 12px "JetBrains Mono", Consolas, monospace; fill: #2563eb; }
+    .meta { font: 400 11.5px Inter, "Segoe UI", Arial, sans-serif; fill: #64748b; }
+    .meta-strong { font: 600 11.5px Inter, "Segoe UI", Arial, sans-serif; fill: #334155; }
+    .note { font: 400 11.5px Inter, "Segoe UI", Arial, sans-serif; fill: #64748b; }
+    .wire { fill: none; stroke: #94a3b8; stroke-width: 1.6; }
+    .wire-red { fill: none; stroke: #e23744; stroke-width: 1.8; }
+    .wire-blue { fill: none; stroke: #2563eb; stroke-width: 1.8; stroke-dasharray: 7 4; }
+    .wire-green { fill: none; stroke: #059669; stroke-width: 1.8; }
+    .wire-dot { fill: none; stroke: #94a3b8; stroke-width: 1.6; stroke-dasharray: 2 4; }
+    .wire-label { font: 500 10.5px Inter, "Segoe UI", Arial, sans-serif; fill: #64748b; }
+    .legend { font: 500 11px Inter, "Segoe UI", Arial, sans-serif; fill: #475569; }
+    .legend-line { stroke-width: 2; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1360" height="900"/>
+  <rect x="0.5" y="0.5" width="1359" height="899" fill="none" stroke="#e2e8f0"/>
+
+  <text class="title" x="48" y="52">JettyOrders · runtime topology</text>
+  <text class="subtitle" x="48" y="76">Service boundaries, transport paths and data stores at runtime</text>
+
+  <!-- Legend -->
+  <rect class="box-soft" x="1004" y="34" width="308" height="62" rx="10"/>
+  <line class="legend-line" x1="1016" y1="52" x2="1046" y2="52" stroke="#e23744" marker-end="url(#arrowRed)"/>
+  <text class="legend" x="1052" y="56">HTTPS</text>
+  <line class="legend-line" x1="1110" y1="52" x2="1140" y2="52" stroke="#2563eb" stroke-dasharray="7 4" marker-end="url(#arrowBlue)"/>
+  <text class="legend" x="1146" y="56">WebSocket</text>
+  <line class="legend-line" x1="1016" y1="79" x2="1046" y2="79" stroke="#059669" marker-end="url(#arrowGreen)"/>
+  <text class="legend" x="1052" y="83">AMQP</text>
+  <line class="legend-line" x1="1110" y1="79" x2="1140" y2="79" stroke="#94a3b8" stroke-dasharray="2 4" marker-end="url(#arrowGray)"/>
+  <text class="legend" x="1146" y="83">external API</text>
+
+  <!-- Top row -->
+  <rect class="box-accent" x="48" y="110" width="250" height="112" rx="12"/>
+  <text class="name" x="68" y="144">Browser</text>
+  <text class="port" x="68" y="166">:5173</text>
+  <text class="meta" x="68" y="190">React 19 SPA · nginx</text>
+  <text class="meta" x="68" y="207">Stripe Elements · Leaflet</text>
+
+  <rect class="box" x="360" y="110" width="260" height="112" rx="12"/>
+  <text class="name" x="380" y="144">api-gateway</text>
+  <text class="port" x="380" y="166">:5007</text>
+  <text class="meta" x="380" y="190">http-proxy · path router</text>
+  <text class="meta" x="380" y="207">no body parsing · CORS passthrough</text>
+
+  <rect class="box-blue" x="682" y="110" width="260" height="112" rx="12"/>
+  <text class="name" x="702" y="144">realtime</text>
+  <text class="port-blue" x="702" y="166">:5005</text>
+  <text class="meta" x="702" y="190">Socket.IO rooms</text>
+  <text class="meta" x="702" y="207">user:{id} · restaurant-{id}</text>
+
+  <rect class="box-soft" x="1004" y="110" width="308" height="112" rx="12"/>
+  <text class="name" x="1024" y="144">docker compose</text>
+  <text class="meta" x="1024" y="168">one private network</text>
+  <text class="meta" x="1024" y="186">mongo · rabbitmq · 9 services</text>
+  <text class="meta" x="1024" y="204">every container exposes /health</text>
+
+  <!-- Browser -> gateway -->
+  <path class="wire-red" d="M298,166 L352,166" marker-end="url(#arrowRed)"/>
+  <text class="wire-label" x="300" y="154">HTTPS / JSON</text>
+
+  <!-- Gateway -> realtime upgrade -->
+  <path class="wire-blue" d="M620,166 L674,166" marker-end="url(#arrowBlue)"/>
+  <text class="wire-label" x="592" y="154">WS upgrade</text>
+
+  <!-- Gateway to services bus -->
+  <path class="wire-red" d="M490,222 L490,278"/>
+  <path class="wire-red" d="M100,278 L1240,278"/>
+  <path class="wire-red" d="M167,278 L167,338" marker-end="url(#arrowRed)"/>
+  <path class="wire-red" d="M372,278 L372,338" marker-end="url(#arrowRed)"/>
+  <path class="wire-red" d="M577,278 L577,338" marker-end="url(#arrowRed)"/>
+  <path class="wire-red" d="M782,278 L782,338" marker-end="url(#arrowRed)"/>
+  <path class="wire-red" d="M987,278 L987,338" marker-end="url(#arrowRed)"/>
+  <path class="wire-red" d="M1192,278 L1192,338" marker-end="url(#arrowRed)"/>
+  <text class="wire-label" x="500" y="270">/api/auth · /api/restaurant · /api/order · /api/rider · /api/admin · /api/payment · /api/ai</text>
+
+  <!-- Services -->
+  <rect x="48" y="300" width="1264" height="200" rx="14" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text class="group-label" x="66" y="326">application services</text>
+
+  <rect class="box" x="72" y="344" width="190" height="132" rx="10"/>
+  <text class="name" x="88" y="378">auth</text>
+  <text class="port" x="88" y="400">:5000</text>
+  <text class="meta" x="88" y="426">users · JWT</text>
+  <text class="meta" x="88" y="444">Google OAuth · SMTP</text>
+
+  <rect class="box" x="277" y="344" width="190" height="132" rx="10"/>
+  <text class="name" x="293" y="378">restaurant</text>
+  <text class="port" x="293" y="400">:5001</text>
+  <text class="meta" x="293" y="426">restaurants · menu</text>
+  <text class="meta" x="293" y="444">cart · address · orders</text>
+
+  <rect class="box" x="482" y="344" width="190" height="132" rx="10"/>
+  <text class="name" x="498" y="378">utils</text>
+  <text class="port" x="498" y="400">:5002</text>
+  <text class="meta" x="498" y="426">Stripe intents</text>
+  <text class="meta" x="498" y="444">Cloudinary uploads</text>
+
+  <rect class="box" x="687" y="344" width="190" height="132" rx="10"/>
+  <text class="name" x="703" y="378">ai</text>
+  <text class="port" x="703" y="400">:5003</text>
+  <text class="meta" x="703" y="426">FastAPI · LangChain</text>
+  <text class="meta" x="703" y="444">suggestions · reviews</text>
+
+  <rect class="box" x="892" y="344" width="190" height="132" rx="10"/>
+  <text class="name" x="908" y="378">rider</text>
+  <text class="port" x="908" y="400">:5004</text>
+  <text class="meta" x="908" y="426">profiles · location</text>
+  <text class="meta" x="908" y="444">availability · dispatch</text>
+
+  <rect class="box" x="1097" y="344" width="190" height="132" rx="10"/>
+  <text class="name" x="1113" y="378">admin</text>
+  <text class="port" x="1113" y="400">:5006</text>
+  <text class="meta" x="1113" y="426">pending review</text>
+  <text class="meta" x="1113" y="444">verify restaurant / rider</text>
+
+  <!-- Mongo bus -->
+  <path class="wire" d="M167,476 L167,532"/>
+  <path class="wire" d="M362,476 L362,532"/>
+  <path class="wire" d="M567,476 L567,532"/>
+  <path class="wire" d="M782,476 L782,532"/>
+  <path class="wire" d="M977,476 L977,532"/>
+  <path class="wire" d="M1192,476 L1192,532"/>
+  <path class="wire" d="M167,532 L1192,532"/>
+  <path class="wire" d="M167,532 L167,590" marker-end="url(#arrowGray)"/>
+  <text class="wire-label" x="206" y="526">MongoDB driver — users, restaurants, menu, carts, orders, riders</text>
+
+  <!-- RabbitMQ bus -->
+  <path class="wire-green" d="M382,476 L382,512"/>
+  <path class="wire-green" d="M587,476 L587,512 L382,512"/>
+  <path class="wire-green" d="M997,476 L997,512 L382,512"/>
+  <path class="wire-green" d="M382,512 L382,590" marker-end="url(#arrowGreen)"/>
+  <rect x="600" y="493" width="190" height="17" fill="#ffffff"/>
+  <text class="wire-label" x="608" y="507">payment_event · order_events</text>
+
+  <!-- Data layer -->
+  <rect x="48" y="552" width="610" height="222" rx="14" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text class="group-label" x="66" y="578">data layer</text>
+
+  <rect class="box-green" x="72" y="596" width="250" height="140" rx="10"/>
+  <text class="name" x="92" y="632">MongoDB</text>
+  <text class="meta" x="92" y="656">users · restaurants · menu_items</text>
+  <text class="meta" x="92" y="674">orders · riders · carts · addresses</text>
+  <text class="meta" x="92" y="700">2dsphere indexes for geo queries</text>
+
+  <rect class="box-green" x="352" y="596" width="282" height="140" rx="10"/>
+  <text class="name" x="372" y="632">RabbitMQ</text>
+  <text class="meta" x="372" y="656">payment_event → restaurant</text>
+  <text class="meta" x="372" y="674">order_events → rider</text>
+  <text class="meta" x="372" y="698">durable queues, manual acknowledgements</text>
+
+  <!-- External providers -->
+  <rect x="682" y="552" width="630" height="222" rx="14" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text class="group-label" x="700" y="578">external providers</text>
+
+  <rect class="box" x="706" y="598" width="276" height="46" rx="8"/>
+  <text class="meta-strong" x="724" y="626">Stripe</text>
+  <text class="meta" x="790" y="626">PaymentIntents · webhook return</text>
+
+  <rect class="box" x="1002" y="598" width="280" height="46" rx="8"/>
+  <text class="meta-strong" x="1020" y="626">Cloudinary</text>
+  <text class="meta" x="1106" y="626">restaurant / menu / rider media</text>
+
+  <rect class="box" x="706" y="664" width="276" height="46" rx="8"/>
+  <text class="meta-strong" x="724" y="692">Groq</text>
+  <text class="meta" x="782" y="692">LLM inference for ai service</text>
+
+  <rect class="box" x="1002" y="664" width="280" height="46" rx="8"/>
+  <text class="meta-strong" x="1020" y="692">Google · SMTP</text>
+  <text class="meta" x="1120" y="692">OAuth and password reset</text>
+
+  <!-- External arrows -->
+  <path class="wire-dot" d="M620,476 L620,621 L700,621" marker-end="url(#arrowGray)"/>
+  <rect x="622" y="594" width="88" height="16" fill="#ffffff"/>
+  <text class="wire-label" x="628" y="607">PaymentIntents</text>
+
+  <path class="wire-dot" d="M650,476 L996,621" marker-end="url(#arrowGray)"/>
+  <rect x="794" y="540" width="102" height="16" fill="#ffffff"/>
+  <text class="wire-label" x="802" y="553">image uploads</text>
+
+  <path class="wire-dot" d="M782,476 L782,687 L700,687" marker-end="url(#arrowGray)"/>
+  <text class="wire-label" x="790" y="652">LLM calls</text>
+
+  <text class="note" x="48" y="816">Coupling rules: services own their collections; cross-service reads go through HTTP; asynchronous side effects go through RabbitMQ.</text>
+  <text class="note" x="48" y="838">restaurant and rider call realtime internally over HTTP; those routes are key-guarded and never exposed by the gateway.</text>
+  <text class="note" x="48" y="860">The gateway routes public prefixes only. /api/internal requires INTERNAL_SERVICE_KEY and is called service-to-service inside the network.</text>
+</svg>

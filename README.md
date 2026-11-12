@@ -1,487 +1,181 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB" alt="React"/>
-  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff" alt="TypeScript"/>
-  <img src="https://img.shields.io/badge/Express-000000?logo=express&logoColor=fff" alt="Express"/>
-  <img src="https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=fff" alt="MongoDB"/>
-  <img src="https://img.shields.io/badge/Socket.IO-010101?logo=socketdotio&logoColor=fff" alt="Socket.IO"/>
-  <img src="https://img.shields.io/badge/RabbitMQ-FF6600?logo=rabbitmq&logoColor=fff" alt="RabbitMQ"/>
-  <img src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff" alt="Python"/>
-  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=fff" alt="FastAPI"/>
-  <img src="https://img.shields.io/badge/Stripe-008CDD?logo=stripe&logoColor=fff" alt="Stripe"/>
-  <img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=fff" alt="Docker"/>
-</p>
+# JettyOrders
 
-# JettyOrders — Food Delivery Platform
+Food delivery platform split into seven services behind an API gateway. Customers browse restaurants, place orders and pay with Stripe. Restaurant owners manage their menu and incoming orders. Riders receive dispatches, set availability and stream their location. Admins verify restaurants and riders.
 
-A production-grade food delivery platform built on a **microservices architecture** with real-time order tracking, AI-powered recommendations, and role-based access for customers, restaurant owners, and riders.
+React 19 · Express 5 · TypeScript · MongoDB · RabbitMQ · Socket.IO · Stripe · FastAPI
 
 ## Architecture
 
-```mermaid
-graph TB
-    subgraph Frontend
-        REACT[React 19 + Vite + TypeScript]
-        SOCKET_CLIENT[Socket.IO Client]
-        LEAFLET[Leaflet Maps]
-        STRIPE_UI[Stripe Elements]
-    end
+![Runtime topology](docs/architecture.svg)
 
-    subgraph "API Gateway / Services"
-        AUTH[Auth Service :5000]
-        RESTAURANT[Restaurant Service :5001]
-        UTILS[Utils Service :5002]
-        AI[AI Service :5003]
-        RIDER[Rider Service :5004]
-        REALTIME[Realtime Service :5005]
-    end
+The browser calls the gateway on `:5007` for REST traffic. Socket.IO upgrades on `/socket.io` are proxied to the realtime service on `:5005`, which owns all rooms (`user:{id}`, `restaurant-{id}`). Each service owns its collections and talks to the others over HTTP or through RabbitMQ; MongoDB is shared storage, not an integration point. Traffic to Stripe, Cloudinary, Groq, Google and SMTP leaves from the service that owns that dependency.
 
-    subgraph "Message Queue"
-        RABBITMQ[RabbitMQ]
-    end
+`/api/internal` is service-to-service only. It requires `INTERNAL_SERVICE_KEY` and is not routed by the gateway.
 
-    subgraph "Data Layer"
-        MONGO[(MongoDB Atlas)]
-        CLOUDINARY[Cloudinary]
-        STRIPE[Stripe API]
-        GROQ[Groq API<br/>LLaMA 3.3]
-    end
+## Order lifecycle
 
-    REACT --> AUTH
-    REACT --> RESTAURANT
-    REACT --> UTILS
-    REACT --> AI
-    REACT --> RIDER
-    REACT --> SOCKET_CLIENT
-    SOCKET_CLIENT --> REALTIME
+![Order lifecycle sequence](docs/order-flow.svg)
 
-    AUTH --> MONGO
-    RESTAURANT --> MONGO
-    RESTAURANT --> RABBITMQ
-    RESTAURANT --> REALTIME
-    UTILS --> MONGO
-    UTILS --> CLOUDINARY
-    UTILS --> STRIPE
-    UTILS --> RABBITMQ
-    RIDER --> MONGO
-    RIDER --> RABBITMQ
-    RIDER --> REALTIME
-    REALTIME --> SOCKET_CLIENT
-    AI --> GROQ
-```
+1. `POST /api/order/create` writes an unpaid order and calculates distance, delivery fee, platform fee and rider payout.
+2. Utils creates a Stripe PaymentIntent. The browser confirms it with Stripe Elements.
+3. `POST /api/payment/confirm` retrieves the intent, verifies the amount and publishes `payment_event`.
+4. The restaurant payment consumer marks the order paid, then emits `order:new` to the seller and customer rooms through realtime.
+5. When the kitchen marks the order ready, `order_events` is published. The rider consumer assigns the nearest available rider.
+6. The rider accepts and moves the order through `picked_up` and `delivered`. Location updates are relayed to the customer's room.
+7. Every status change is written by the restaurant service and broadcast by realtime.
 
-## Order Lifecycle
-
-```mermaid
-stateDiagram-v2
-    [*] --> placed: Order Created
-    placed --> accepted: Restaurant Accepts
-    accepted --> preparing: Preparing Food
-    preparing --> ready_for_rider: Ready for Pickup
-    ready_for_rider --> rider_assigned: Rider Assigned
-    rider_assigned --> pickedUp: Rider Picked Up
-    pickedUp --> delivered: Delivered
-    delivered --> [*]
-
-    placed --> canceled: Canceled
-```
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4, React Router v7 |
-| **State / HTTP** | Axios, React Context, react-hot-toast |
-| **Maps** | React-Leaflet, Leaflet |
-| **Auth** | Express, JWT, bcryptjs, Google OAuth (via `@react-oauth/google`) |
-| **Database** | MongoDB Atlas, Mongoose (7 collections) |
-| **Message Queue** | RabbitMQ (amqplib) |
-| **Real-time** | Socket.IO (rooms, internal events) |
-| **Payments** | Stripe (Payment Intents) |
-| **Media** | Cloudinary, Multer, DataUri |
-| **AI** | Python FastAPI, LangChain, Groq (LLaMA 3.3-70b) |
-| **Email** | Nodemailer |
-| **Validation** | Zod |
+Stripe can also send the browser back after 3-D Secure. `OrderConfirmation` reads `payment_intent` and `redirect_status`, then calls the same idempotent confirm endpoint.
 
 ## Services
 
-| Service | Port | Role |
-|---------|------|------|
-| **auth** | 5000 | User registration, login, Google OAuth, JWT issuance, password reset |
-| **restaurant** | 5001 | Restaurant CRUD, menu items, cart, addresses, order placement, payment consumer |
-| **utils** | 5002 | Stripe payment intents, Cloudinary image uploads, payment event producer |
-| **ai** | 5003 | Dish/restaurant suggestions, review generation via Groq LLM |
-| **rider** | 5004 | Rider registration, location updates, availability toggling, order acceptance |
-| **realtime** | 5005 | Central WebSocket gateway — order notifications, rider location broadcasting |
-| **frontend** | 5173 | SPA with 16 pages, role-based routing, real-time maps |
+| Service | Port | Responsibility |
+|---|---|---|
+| `auth` | 5000 | Registration, email/password and Google login, JWT access and refresh tokens, password reset |
+| `restaurant` | 5001 | Restaurants, menu items, carts, addresses, order creation and status, payment consumer |
+| `utils` | 5002 | Stripe PaymentIntents, Cloudinary uploads, payment event producer |
+| `ai` | 5003 | Dish suggestions, restaurant suggestions and review generation |
+| `rider` | 5004 | Rider registration, availability, location, order acceptance and delivery |
+| `realtime` | 5005 | Socket.IO rooms, order events, rider location relay |
+| `admin` | 5006 | Pending restaurant/rider review and verification |
+| `gateway` | 5007 | Reverse proxy and Socket.IO upgrade routing |
+| `frontend` | 5173 | React SPA served by nginx |
 
-## API Reference
+## Repository layout
 
-### Auth Service — `/api/auth`
+```
+.
+├── docker-compose.yml
+├── docs/                     architecture and order-flow drawings
+├── frontend/                 React SPA, nginx image
+└── services/
+    ├── auth/                 users, JWT, OAuth, SMTP
+    ├── restaurant/           core order domain and payment consumer
+    ├── utils/                payments and uploads
+    ├── ai/                   FastAPI service
+    ├── rider/                dispatch and delivery
+    ├── realtime/             Socket.IO server
+    ├── admin/                verification API
+    └── gateway/              HTTP + WebSocket proxy
+```
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/register` | — | Register new user (Google OAuth or email) |
-| POST | `/login` | — | Login with email/password |
-| POST | `/forgot-password` | — | Send password reset email |
-| POST | `/reset-password` | — | Reset password |
-| PUT | `/add/role` | ✓ | Assign role (customer/seller/rider) |
-| GET | `/me` | ✓ | Get current user profile |
+## Run with Docker
 
-### Restaurant Service — `/api/restaurant`
+Prerequisites: Docker Desktop (or Docker Engine with Compose v2).
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/new` | Seller | Create restaurant (with image upload) |
-| GET | `/my` | ✓ | Get own restaurant |
-| PUT | `/edit` | Seller | Update restaurant details |
-| PUT | `/status` | Seller | Toggle open/closed |
-| GET | `/nearby` | — | Find restaurants near location (geo query) |
-| GET | `/all` | — | List all restaurants |
-| GET | `/:id` | ✓ | Get single restaurant |
-| DELETE | `/delete` | Seller | Delete restaurant + menu items |
-
-### Menu Items — `/api/menu-item`
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/new` | Seller | Add menu item |
-| GET | `/all` | ✓ | Get items for own restaurant |
-| GET | `/public/:restaurantId` | — | Public menu for restaurant |
-| GET | `/all-available` | — | All available items |
-| PUT | `/:id` | Seller | Update menu item |
-| PATCH | `/:id/status` | Seller | Toggle availability |
-| DELETE | `/:id` | Seller | Delete menu item |
-
-### Cart — `/api/cart`
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/all` | Customer | Get cart contents |
-| POST | `/add` | Customer | Add item to cart |
-| PUT | `/:menuItemId` | Customer | Update item quantity |
-| DELETE | `/:menuItemId` | Customer | Remove item |
-| DELETE | `/clear` | Customer | Clear entire cart |
-
-### Orders — `/api/order`
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/create` | ✓ | Place order (calculates fees + distance) |
-| GET | `/payment/:orderId` | Internal | Fetch order for Stripe payment |
-| GET | `/my-orders` | ✓ | Get user's order history |
-| GET | `/restaurant/:restaurantId` | Seller | Get restaurant's orders |
-| PUT | `/:orderId/status` | Seller | Update order status |
-| GET | `/:orderId` | ✓ | Get single order details |
-
-### AI Service — `/api/ai`
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/suggest-dish` | AI dish name + description from keywords |
-| POST | `/suggest-restaurants` | Restaurant recommendations |
-| POST | `/generate-review` | Generate review text for a restaurant |
-
-### Utils Service
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/upload` | Upload image to Cloudinary |
-| POST | `/api/payment/create-payment-intent` | Create Stripe PaymentIntent |
-| POST | `/api/payment/confirm` | Confirm Stripe payment |
-
-### Rider Service — `/api/rider`
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/register` | ✓ | Register as rider (with license + image) |
-| GET | `/me` | ✓ | Get rider profile |
-| PUT | `/location` | ✓ | Update current location |
-| PATCH | `/availability` | ✓ | Go online/offline |
-| POST | `/accept-order/:orderId` | ✓ | Accept delivery order |
-
-## Database Schema
-
-### User (auth & rider services)
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | String | Display name (from Google OAuth) |
-| `email` | String | Unique email |
-| `image` | String | Google profile photo URL |
-| `role` | String | `customer`, `seller`, `rider`, or `null` |
-| `restaurantId` | String | Linked restaurant (if seller) |
-
-### Restaurant
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | String | Restaurant name |
-| `image` | String | Cloudinary URL |
-| `address` | String | Formatted address |
-| `ownerId` | String | Reference to User |
-| `phone` | Number | Contact number |
-| `isVerified` | Boolean | Admin verification flag |
-| `isOpen` | Boolean | Open/closed status |
-| `autoLocation` | 2dsphere | GeoJSON point for proximity search |
-
-### MenuItem
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | String | Item name |
-| `price` | Number | Price in USD |
-| `image` | String | Cloudinary URL |
-| `category` | String | Category name |
-| `restaurantId` | ObjectId | Reference to Restaurant |
-| `isAvailable` | Boolean | In-stock flag |
-
-### Order
-| Field | Type | Description |
-|-------|------|-------------|
-| `userId` | String | Customer reference |
-| `restaurantId` | String | Restaurant reference |
-| `items[]` | Array | Name, menuItemId, price, quantity |
-| `subtotal` | Number | Sum of item prices |
-| `deliveryFee` | Number | Flat $2.99 delivery fee |
-| `platformFee` | Number | 5% platform fee |
-| `totalAmount` | Number | Grand total |
-| `distance` | Number | Haversine distance (km) |
-| `riderAmount` | Number | Rider payout (distance × $0.17) |
-| `status` | Enum | `placed` → `delivered` (9 states) |
-| `paymentStatus` | Enum | `paid` / `unpaid` |
-| `paymentMethod` | String | `stripe` |
-| `deliveryAddress` | Embedded | Formatted address, mobile, coordinates |
-| `riderId` | String | Assigned rider reference |
-| `expiresAt` | Date | TTL index — auto-cancels unpaid orders |
-
-### Rider
-| Field | Type | Description |
-|-------|------|-------------|
-| `userId` | String | User reference (unique) |
-| `phone` | String | Contact number |
-| `driversLicenseNumber` | String | License ID (unique) |
-| `image` | String | Profile photo |
-| `isAvailable` | Boolean | Online/offline |
-| `isVerified` | Boolean | Background check flag |
-| `totalDeliveries` | Number | Delivery count |
-| `currentLocation` | 2dsphere | Real-time GeoJSON point |
-
-### Cart
-| Field | Type | Description |
-|-------|------|-------------|
-| `userId` | ObjectId | Customer reference (unique) |
-| `items[]` | Array | menuItemId, quantity, name, price, image, category, restaurantId |
-
-### Address
-| Field | Type | Description |
-|-------|------|-------------|
-| `userId` | String | Customer reference |
-| `mobile` | Number | Phone number |
-| `formattedAddress` | String | Full address text |
-| `location` | 2dsphere | GeoJSON point |
-
-## Quick Start
+Each service reads credentials from its own `.env` file. Compose overrides database, broker and service URLs with container DNS names, so the same files work for local development.
 
 ```bash
-# Clone
-git clone https://github.com/Tochiiy/jettyOrders-Delivery.git
-cd jettyOrders-Delivery
+docker compose build
+docker compose up -d
+docker compose ps
+```
 
-# Install dependencies (each service)
-cd services/auth && npm install
-cd ../restaurant && npm install
-cd ../utils && npm install
-cd ../rider && npm install
-cd ../realtime && npm install
-cd ../../frontend && npm install
+| URL | What |
+|---|---|
+| http://localhost:5173 | Web app |
+| http://localhost:5007/health | Gateway |
+| http://localhost:15672 | RabbitMQ management (`jetty` / `jetty` by default) |
+| mongodb://localhost:27017 | MongoDB |
 
-# Set up environment variables
-# Copy .env.example patterns for each service:
+All containers expose `/health`. `docker compose ps` shows the health state; `docker compose logs -f <service>` follows one service.
 
-# Auth (services/auth/.env)
-PORT=5000
-MONGO_URI=mongodb+srv://...
-JWT_SECRET=your-secret
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=...
-SMTP_PASS=...
+```bash
+# Stop and keep data
+docker compose down
 
-# Restaurant (services/restaurant/.env)
-PORT=5001
-MONGO_URI=mongodb+srv://...
-JWT_SECRET=...
-INTERNAL_SERVICE_KEY=...
-RABBITMQ_URL=amqp://localhost
-UTILS_SERVICE=http://localhost:5002
-REALTIME_SERVICE_URL=http://localhost:5005
+# Stop and delete MongoDB/RabbitMQ volumes
+docker compose down -v
+```
 
-# Utils (services/utils/.env)
-PORT=5002
-MONGO_URI=...
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
-STRIPE_SECRET_KEY=sk_test_...
-RABBITMQ_URL=amqp://localhost
+Compose-level values (build-time frontend keys, broker credentials, database name) can be set in a root `.env`. Start from `.env.example`.
 
-# AI (services/ai/.env)
-PORT=5003
-GROQ_API_KEY=gsk_...
+## Configuration
 
-# Rider (services/rider/.env)
-PORT=5004
-MONGO_URI=...
-JWT_SECRET=...
-RABBITMQ_URL=amqp://localhost
-RESTAURANT_SERVICE=http://localhost:5001
-REALTIME_SERVICE_URL=http://localhost:5005
+| File | Required keys |
+|---|---|
+| `services/auth/.env` | `MONGO_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
+| `services/restaurant/.env` | `MONGO_URI`, `JWT_SECRET`, `INTERNAL_SERVICE_KEY`, `UTILS_SERVICE`, `RABBITMQ_URL`, `REALTIME_SERVICE_URL`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
+| `services/utils/.env` | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `RABBITMQ_URL`, `INTERNAL_SERVICE_KEY`, `RESTAURANT_SERVICE`, `STRIPE_SECRET_KEY`, `PAYMENT_QUEUE`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
+| `services/ai/.env` | `GROQ_API_KEY`, `JWT_SECRET`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
+| `services/rider/.env` | `MONGO_URI`, `JWT_SECRET`, `INTERNAL_SERVICE_KEY`, `RESTAURANT_SERVICE`, `UTILS_SERVICE`, `RABBITMQ_URL`, `REALTIME_SERVICE_URL`, `ORDER_EVENT_QUEUE`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
+| `services/realtime/.env` | `JWT_SECRET`, `RIDER_SERVICE_URL`, `INTERNAL_SERVICE_KEY` |
+| `services/admin/.env` | `MONGO_URI`, `JWT_SECRET` |
+| `services/gateway/.env` | service URLs only; Compose supplies them |
+| `frontend/.env` | only for local Vite development; the Docker build receives `VITE_*` as build args |
 
-# Realtime (services/realtime/.env)
-PORT=5005
-JWT_SECRET=...
-CORS_ORIGIN=http://localhost:5173
+`INTERNAL_SERVICE_KEY` must be identical in restaurant, utils, rider and realtime. Queue names must match on both ends: `PAYMENT_QUEUE` (utils → restaurant) and `ORDER_EVENT_QUEUE` (restaurant → rider).
 
-# Frontend (frontend/.env)
-VITE_API_URL=http://localhost:5000
-VITE_RESTAURANT_API=http://localhost:5001
-VITE_UTILS_API=http://localhost:5002
-VITE_AI_API=http://localhost:5003
-VITE_REALTIME_API=http://localhost:5005
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+### Upstash Redis (optional)
 
-# Start RabbitMQ (Docker)
-docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:management
+`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` connect the services to an Upstash Redis database over the REST API. Redis is optional and all integrations fail open:
 
-# Start backend services (in separate terminals)
+- **auth, restaurant, utils, rider** — API/auth/internal rate limiters share counters through Redis, so limits hold across replicas. Without Redis they fall back to per-process memory.
+- **restaurant** — restaurant lists, nearby results, single restaurants and public menus are cached for 30–60 seconds and invalidated on writes. Responses carry `X-Cache: HIT|MISS`.
+- **ai** — dish/restaurant/review generations are cached for one hour, keyed by a SHA-256 of the normalized prompt inputs.
+
+If the variables are missing or Upstash is unreachable, the services log once and continue without caching or shared limits. Socket.IO pub/sub still uses RabbitMQ; Upstash REST does not support pub/sub.
+
+## Local development
+
+```bash
+# Terminal per Node service
 cd services/auth && npm run dev
 cd services/restaurant && npm run dev
 cd services/utils && npm run dev
-cd services/ai && source .venv/bin/activate && uvicorn src.main:app --port 5003 --reload
 cd services/rider && npm run dev
 cd services/realtime && npm run dev
+cd services/admin && npm run dev
+cd services/gateway && npm run dev
 
-# Start frontend
+# Python service
+cd services/ai && uvicorn main:app --app-dir src --port 5003 --reload
+
+# Frontend
 cd frontend && npm run dev
 ```
 
-## Environment Variables
+Run MongoDB and RabbitMQ with `docker compose up -d mongo rabbitmq`, or point `MONGO_URI` and `RABBITMQ_URL` at existing instances.
 
-### Shared
-| Variable | Description |
-|----------|-------------|
-| `MONGO_URI` | MongoDB Atlas connection string |
-| `JWT_SECRET` | JWT signing secret |
-| `INTERNAL_SERVICE_KEY` | Shared secret for inter-service auth |
-| `RABBITMQ_URL` | RabbitMQ connection string |
+## API surface
 
-### Payments
-| Variable | Description |
-|----------|-------------|
-| `STRIPE_SECRET_KEY` | Stripe secret key (sk_test_...) |
-| `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (pk_test_...) |
+| Prefix | Service | Notes |
+|---|---|---|
+| `/api/auth` | auth | `register`, `login`, `refresh`, `me`, password reset, `add/role` |
+| `/api/restaurant` | restaurant | restaurant CRUD, `nearby`, `all`, status |
+| `/api/menu-item` | restaurant | menu CRUD and availability |
+| `/api/cart` | restaurant | cart line items |
+| `/api/address` | restaurant | saved delivery addresses |
+| `/api/order` | restaurant | create, list, status; internal payment lookup |
+| `/api/upload` | utils | Cloudinary image upload |
+| `/api/payment` | utils | `create-payment-intent`, `confirm` |
+| `/api/ai` | ai | `suggest-dish`, `suggest-restaurants`, `generate-review` |
+| `/api/rider` | rider | register, `me`, location, availability, accept order |
+| `/api/admin` | admin | pending lists and verification; requires `role: "admin"` |
 
-### AI
-| Variable | Description |
-|----------|-------------|
-| `GROQ_API_KEY` | Groq Cloud API key |
+The gateway routes these prefixes unchanged, so the service route tables remain the source of truth.
 
-### Media
-| Variable | Description |
-|----------|-------------|
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
-| `CLOUDINARY_API_KEY` | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+## Operational notes
 
-### Auth
-| Variable | Description |
-|----------|-------------|
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `SMTP_HOST` | SMTP server (e.g. smtp.gmail.com) |
-| `SMTP_USER` | SMTP username |
-| `SMTP_PASS` | SMTP password or app password |
+- Promote an admin by setting `role: "admin"` on the user document in MongoDB. The role endpoint only accepts `customer`, `seller` and `rider`.
+- Rider verification is manual: register, then approve in the admin dashboard.
+- `OrderConfirmation` keeps the order status current over Socket.IO; `rider:location` drives the Leaflet map.
+- Unpaid orders expire through the TTL index on `Order.expiresAt`.
+- The gateway does not parse request bodies. File uploads stream through untouched.
 
-## Project Structure
-
-```
-jettyOrders-Delivery/
-├── frontend/                    # React 19 SPA
-│   ├── src/
-│   │   ├── components/          # UI components (14)
-│   │   ├── context/             # AppContext, CartContext, SocketContext
-│   │   ├── pages/               # 16 page components
-│   │   ├── services/            # API service modules (11)
-│   │   ├── types/               # TypeScript interfaces
-│   │   └── utils/               # Helpers
-│   └── vite.config.ts
-│
-├── services/
-│   ├── auth/                    # Auth service (Express + Mongoose)
-│   │   └── src/
-│   │       ├── controllers/     # auth.ts
-│   │       ├── models/          # User.ts
-│   │       └── routes/          # auth.ts
-│   │
-│   ├── restaurant/              # Core business service
-│   │   └── src/
-│   │       ├── controllers/     # restaurant, menuitem, cart, order, address
-│   │       ├── events/          # order.publisher, paymentConsumer
-│   │       ├── models/          # Restaurant, MenuItem, Cart, Order, Address
-│   │       └── routes/
-│   │
-│   ├── rider/                   # Rider service
-│   │   └── src/
-│   │       ├── controllers/     # rider.ts
-│   │       ├── events/          # order.consumer
-│   │       └── models/          # Rider
-│   │
-│   ├── realtime/                # WebSocket gateway
-│   │   └── src/                 # index.ts, sockets.ts, internal.ts
-│   │
-│   ├── utils/                   # Shared utilities
-│   │   └── src/
-│   │       ├── controllers/     # payment.ts
-│   │       ├── events/          # paymentProducer
-│   │       └── services/        # paymentHeader
-│   │
-│   └── ai/                      # AI service (Python)
-│       └── src/
-│           ├── agents.py        # LangChain agents
-│           ├── config.py        # Pydantic settings
-│           └── main.py          # FastAPI app
-│
-└── README.md
-```
-
-## Features
-
-- **Multi-role system**: Customer, Seller (restaurant owner), Rider — each with dedicated dashboard and flows
-- **Google OAuth**: One-click sign-in with Google account
-- **Nearby restaurants**: Geospatial queries using MongoDB 2dsphere indexes
-- **Real-time order tracking**: Socket.IO pushes status updates (placed → accepted → preparing → rider_assigned → pickedUp → delivered)
-- **Live rider location**: Leaflet map displays rider position during delivery
-- **AI-powered suggestions**: Groq LLaMA 3.3 generates dish ideas, restaurant recommendations, and reviews
-- **Stripe payments**: Payment Intents with full checkout flow
-- **RabbitMQ event-driven**: Async communication between services for payments and order events
-- **Cloudinary media**: Image uploads for restaurants, menu items, and rider profiles
-- **Role-based UI**: Different navigation, pages, and components based on user role
-- **Order fee calculation**: Haversine distance + dynamic rider payout ($0.17/km) + 5% platform fee
-
-## Deployment
+## Checks
 
 ```bash
-# Build frontend
-cd frontend && npm run build
+# Every TypeScript service
+for d in services/auth services/restaurant services/utils services/rider \
+         services/realtime services/admin services/gateway; do
+  (cd "$d" && npm run build)
+done
 
-# Each service can be deployed independently:
-# Auth, Restaurant, Utils, Rider, Realtime — Node.js services
-# AI — Python FastAPI (uvicorn)
+# Frontend
+cd frontend && npm run lint && npm run build
 
-# Requires:
-# - MongoDB Atlas cluster
-# - RabbitMQ instance (CloudAMQP or self-hosted)
-# - Stripe account
-# - Cloudinary account
-# - Groq API key
-# - Google OAuth credentials
+# Container state
+docker compose ps
 ```
+
+Manual end-to-end path: register a customer, seller and rider; approve the seller and rider from an admin account; add a restaurant with menu items; place an order; pay with `4242 4242 4242 4242`; accept and prepare it as the seller; accept and deliver it as the rider; watch status and location in the customer view.

@@ -5,8 +5,7 @@ import { useState, useEffect, useRef, type FormEvent } from "react";
 import { getMyProfile, toggleAvailability, registerRider, acceptOrder, getActiveOrders, updateOrderStatus, updateLocation } from "../services/riderService";
 import { toast } from "react-hot-toast";
 import { BiCheckCircle, BiXCircle, BiPackage, BiMapPin, BiTime, BiUpload, BiCurrentLocation, BiDollarCircle, BiCheck, BiUser, BiVolumeFull } from "react-icons/bi";
-import { useNavigate } from "react-router-dom";
-import audio from "../assets/software-interface-257.wav";
+import audio from "../assets/software-interface-257.wav";import RiderOrderMap from "../components/RiderOrderMap";
 
 interface AvailableOrder {
   orderId: string;
@@ -32,7 +31,6 @@ const statusLabel: Record<string, string> = {
 };
 
 const RiderDashboard = () => {
-  const navigate = useNavigate();
   const { user } = useAppData();
   const { socket } = useSocket();
   const [toogle, setToogle] = useState(false);
@@ -44,7 +42,6 @@ const RiderDashboard = () => {
 
   const [availableOrders, setAvailableOrders] = useState<AvailableOrder[]>([]);
   const [activeOrders, setActiveOrders] = useState<IOrder[]>([]);
-  const [loadingOrders, setLoadingOrders] = useState(false);
   const [acceptingIds, setAcceptingIds] = useState<Set<string>>(new Set());
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
   const [audioUnlocked, setAudioUnlocked] = useState(false);
@@ -280,6 +277,10 @@ const RiderDashboard = () => {
                 <label htmlFor="rider-license" className="sr-only">Drivers License Number</label>
                 <input id="rider-license" name="driversLicenseNumber" placeholder="Drivers License Number" required className="w-full border rounded-lg px-5 py-4 text-base outline-none focus:ring-2 focus:ring-red-200" />
               </div>
+              <div>
+                <label htmlFor="rider-aadhar" className="sr-only">Aadhaar Number</label>
+                <input id="rider-aadhar" name="aadharNumber" placeholder="Aadhaar Number" className="w-full border rounded-lg px-5 py-4 text-base outline-none focus:ring-2 focus:ring-red-200" />
+              </div>
               {loadingLocation && <p className="text-sm text-gray-500 -mt-3">Fetching your location...</p>}
               <input name="latitude" type="hidden" value={userLocation?.latitude || ""} />
               <input name="longitude" type="hidden" value={userLocation?.longitude || ""} />
@@ -446,9 +447,19 @@ const RiderDashboard = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-4">
-                        <BiUser className="h-3.5 w-3.5" />
-                        {order.deliveryAddress.formattedAddress}
+                      <div className="flex items-center justify-between gap-3 text-xs text-slate-400 mb-4">
+                        <div className="flex items-center gap-1.5">
+                          <BiUser className="h-3.5 w-3.5" />
+                          {order.deliveryAddress.formattedAddress}
+                        </div>
+                        {order.deliveryAddress.mobile && (
+                          <a
+                            href={`tel:${order.deliveryAddress.mobile}`}
+                            className="shrink-0 rounded-full bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                          >
+                            Call
+                          </a>
+                        )}
                       </div>
 
                       {order.status === "rider_assigned" && (
@@ -468,6 +479,12 @@ const RiderDashboard = () => {
                         >
                           {updatingIds.has(order._id) ? "Updating..." : "Mark as Delivered"}
                         </button>
+                      )}
+
+                      {(order.status === "rider_assigned" || order.status === "pickedUp") && (
+                        <div className="mt-4">
+                          <RiderOrderMap order={order} />
+                        </div>
                       )}
                     </div>
                   ))}

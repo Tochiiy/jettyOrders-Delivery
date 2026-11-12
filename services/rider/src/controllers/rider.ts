@@ -18,7 +18,7 @@ const registerRider = TryCatch(async (req: AuthenticatedRequest, res: Response) 
     }
 
  
-    const { phone, driversLicenseNumber, latitude, longitude } = req.body;
+    const { phone, driversLicenseNumber, aadharNumber, latitude, longitude } = req.body;
     if (!phone || !driversLicenseNumber || latitude == null || longitude == null) {
         res.status(400).json({ message: "All fields are required" });
         return;
@@ -49,6 +49,7 @@ const registerRider = TryCatch(async (req: AuthenticatedRequest, res: Response) 
     const rider = await Rider.create({
         userId: String(user._id),
         phone,
+        aadharNumber,
         driversLicenseNumber,
         image: uploadResult.url,
         currentLocation: {
@@ -132,7 +133,7 @@ const updateLocation = TryCatch(async (req: AuthenticatedRequest, res: Response)
     }
 
     // don't leak sensitive fields
-    const { driversLicenseNumber, ...safe } = rider;
+    const { driversLicenseNumber, aadharNumber, ...safe } = rider;
     res.json({ message: "Location updated", rider: safe });
 });
 
@@ -171,7 +172,7 @@ const toggleAvailability = TryCatch(async (req: AuthenticatedRequest, res: Respo
     };
     await rider.save();
 
-    const { driversLicenseNumber, ...safe } = rider.toObject ? rider.toObject() : rider;
+    const { driversLicenseNumber, aadharNumber, ...safe } = rider.toObject ? rider.toObject() : rider;
     res.json({ message: rider.isAvailable ? "You are now online" : "You are now offline", rider: safe });
 });
 
@@ -274,7 +275,7 @@ const internalUpdateLocation = TryCatch(async (req: Request, res: Response) => {
     return;
   }
 
-  const { driversLicenseNumber, ...safe } = rider;
+  const { driversLicenseNumber, aadharNumber, ...safe } = rider;
   res.json({ message: "Location updated", rider: safe });
 });
 

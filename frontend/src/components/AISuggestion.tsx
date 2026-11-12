@@ -23,6 +23,7 @@ const AISuggestion = ({ title, description, placeholder, buttonText, apiCall, ex
     try {
       const res = await apiCall(input);
       setResult(extractResult(res));
+      setInput("");
     } catch {
       toast.error("Failed to get suggestion. Try again later.");
     } finally {
