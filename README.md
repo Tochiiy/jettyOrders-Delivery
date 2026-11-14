@@ -229,5 +229,3 @@ cd frontend && npm run lint && npm run build
 # Container state
 docker compose ps
 ```
-
-Manual end-to-end path: register a customer, seller and rider; approve the seller and rider from an admin account; add a restaurant with menu items; place an order; pay with `4242 4242 4242 4242`; accept and prepare it as the seller; accept and deliver it as the rider; watch status and location in the customer view.
