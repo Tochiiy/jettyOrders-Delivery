@@ -140,7 +140,12 @@ const fetchOrderForPayment = TryCatch(async (req: AuthenticatedRequest, res: Res
     if (order.paymentStatus === "paid") {
         return res.status(400).json({ message: "Order already paid" });
     }
-    res.status(200).json({ orderId: order._id.toString(), amount: order.totalAmount, currency: "USD" });
+    res.status(200).json({
+        orderId: order._id.toString(),
+        userId: String(order.userId),
+        amount: order.totalAmount,
+        currency: "USD",
+    });
 });
 
 

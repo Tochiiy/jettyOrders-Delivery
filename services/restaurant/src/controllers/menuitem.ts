@@ -28,7 +28,8 @@ const addMenuItem = TryCatch(async (req: AuthenticatedRequest, res: Response) =>
         const fileBuffer = getBuffer(file);
         if (fileBuffer.content) {
             const { data: uploadResult } = await axios.post(`${process.env.UTILS_SERVICE}/api/upload`,
-                { buffer: fileBuffer.content }
+                { buffer: fileBuffer.content },
+                { headers: { Authorization: req.headers.authorization } }
             );
             image = uploadResult.url;
         }
@@ -75,7 +76,8 @@ const updateMenuItem = TryCatch(async (req: AuthenticatedRequest, res: Response)
         const fileBuffer = getBuffer(file);
         if (fileBuffer.content) {
             const { data: uploadResult } = await axios.post(`${process.env.UTILS_SERVICE}/api/upload`,
-                { buffer: fileBuffer.content }
+                { buffer: fileBuffer.content },
+                { headers: { Authorization: req.headers.authorization } }
             );
             fields.image = uploadResult.url;
         }

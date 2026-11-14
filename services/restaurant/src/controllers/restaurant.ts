@@ -9,9 +9,8 @@ import axios from "axios";
 import jwt from "jsonwebtoken";
 import { cacheGet, cacheSet, cacheDel, cacheInvalidatePattern, TTL } from "../config/cache.js";
 
-const JWT_SECRET = process.env.JWT_SECRET as string
 const signToken = (userId: string, restaurantId: string | null) =>
-  jwt.sign({ userId, restaurantId }, JWT_SECRET, { expiresIn: "7d" })
+  jwt.sign({ userId, restaurantId }, process.env.JWT_SECRET as string, { expiresIn: "7d" })
 
 const listCacheKey = (search: unknown, verified: unknown) =>
   `restaurant:list:${verified === "true" ? "verified" : "any"}:${typeof search === "string" ? search.toLowerCase().slice(0, 80) : ""}`;
@@ -60,6 +59,9 @@ const addRestaurant = TryCatch(async (req: AuthenticatedRequest, res: Response) 
     const { data: uploadResult } = await axios.post(`${process.env.UTILS_SERVICE}/api/upload`,
         {
             buffer: fileBuffer.content,
+        },
+        {
+            headers: { Authorization: req.headers.authorization },
         }
     );
 

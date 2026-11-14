@@ -1,6 +1,6 @@
 import { getChannel } from "../config/rabbitmq.js";
 
-const ORDER_EVENT_QUEUE = process.env.ORDER_EVENT_QUEUE as string;
+const getOrderEventQueue = () => process.env.ORDER_EVENT_QUEUE as string;
 
 export type OrderEventType =
   | "ORDER_PLACED"
@@ -36,7 +36,7 @@ interface OrderEvent {
 const publishOrderEvent = async (event: OrderEvent) => {
   try {
     const channel = await getChannel();
-    channel.sendToQueue(ORDER_EVENT_QUEUE, Buffer.from(JSON.stringify(event)), {
+    channel.sendToQueue(getOrderEventQueue(), Buffer.from(JSON.stringify(event)), {
       persistent: true,
     });
     console.log(`Order event published: ${event.type} - ${event.data.orderId}`);
@@ -45,4 +45,4 @@ const publishOrderEvent = async (event: OrderEvent) => {
   }
 };
 
-export { publishOrderEvent, ORDER_EVENT_QUEUE };
+export { publishOrderEvent };

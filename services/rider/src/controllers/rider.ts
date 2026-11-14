@@ -44,6 +44,8 @@ const registerRider = TryCatch(async (req: AuthenticatedRequest, res: Response) 
 
     const { data: uploadResult } = await axios.post(`${process.env.UTILS_SERVICE}/api/upload`, {
         buffer: fileBuffer.content,
+    }, {
+        headers: { Authorization: req.headers.authorization },
     });
 
     const rider = await Rider.create({

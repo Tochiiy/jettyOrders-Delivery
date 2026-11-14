@@ -1,1 +1,1 @@
-declare module 'datauri/parser';
+declare module 'datauri/parser.js';
